@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#14324F">
+<meta name="mobile-web-app-capable" content="yes">
+<title>My Planner &amp; Mail</title>
+<style>
+:root{--navy:#14324F;--navy2:#0E253D;--blue:#1F6FB2;--ink:#1C2733;--soft:#5A6B7C;--line:#D8E1EA;--bg:#F2F5F8;--card:#fff;--green:#1E7B34;--red:#B3261E;--amber:#B4690E;--tint:#EAF2FA}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}
+button{font:inherit;cursor:pointer;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:6px;padding:7px 13px;font-weight:600;font-size:13.5px}
+button:hover{background:var(--navy);color:#fff}
+button.primary{background:var(--navy);color:#fff}
+button.primary:hover{background:var(--navy2)}
+button.ghost{border-color:var(--line);color:var(--soft)}
+button.ghost:hover{background:var(--tint);color:var(--navy)}
+button.danger{border-color:var(--red);color:var(--red)}
+button.danger:hover{background:var(--red);color:#fff}
+button.sm{padding:4px 9px;font-size:12px}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);width:100%}
+textarea{resize:vertical;min-height:70px}
+input[type=checkbox],input[type=radio]{width:auto}
+input[type=color]{padding:2px;height:38px}
+label.l{display:block;font-size:12px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.03em;margin:0 0 4px}
+.field{margin-bottom:12px;min-width:0}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>.field{flex:1 1 170px}
+.note{font-size:12.5px;color:var(--soft)}
+.muted{color:var(--soft)}
+.check{display:flex;gap:8px;align-items:center;font-size:14px;margin:4px 0}
+.btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+.card h3{margin:0 0 12px;font-size:16px;color:var(--navy)}
+h1.pt{font-size:22px;margin:0 0 4px;color:var(--navy)}
+.sub{font-size:13px;color:var(--soft);margin-bottom:16px}
+/* calendar */
+.calbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;color:var(--soft);background:#fff;padding:7px 14px}
+.seg button.on{background:var(--navy);color:#fff}
+.calbar b{font-size:21px;color:var(--navy);min-width:210px;text-align:center}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);background:#fff}
+.dow{background:var(--navy);color:#fff;font-size:12.5px;font-weight:700;text-transform:uppercase;text-align:center;padding:7px 0}
+.cell{height:calc((100vh - 178px) / 6);min-height:96px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:5px 6px;cursor:pointer;overflow:hidden;display:flex;flex-direction:column}
+.cell.wk{height:calc(100vh - 178px);min-height:440px}
+.cell.wk .chip{white-space:normal;font-size:13.5px;padding:5px 7px;margin-bottom:4px}
+.cell:hover{background:#F5F9FD}
+.cell.other{background:#F7F8FA;color:#9AA6B2}
+.cell.today{box-shadow:inset 0 0 0 2px var(--blue)}
+.cell.sel{background:var(--tint)}
+.dn{font-size:15px;font-weight:700;margin-bottom:3px;line-height:1.3}
+.cell.today .dn{color:#fff;background:var(--blue);border-radius:12px;padding:0 8px;align-self:flex-start}
+.chip{color:#fff;font-size:12.5px;border-radius:5px;padding:2px 6px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto}
+.chip.task{background:#5C6B7A}
+.chip.done{opacity:.5;text-decoration:line-through}
+.more{font-size:12px;color:var(--blue);font-weight:700}
+.calwrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+body.nopanel .calwrap{grid-template-columns:1fr}body.nopanel .calside{display:none}
+@media (max-width:1100px){.calwrap{grid-template-columns:1fr}.calside{display:grid;grid-template-columns:1fr 1fr;gap:16px}}
+@media (max-width:700px){.calside{grid-template-columns:1fr}.cell{min-height:70px;padding:3px}.chip{font-size:10px;padding:1px 3px}.dn{font-size:12.5px}.calbar b{min-width:0;font-size:17px}.cell.wk{min-height:300px}}
+.it{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+.it:last-child{border-bottom:0}
+.it .tm{flex:0 0 78px;font-size:12.5px;color:var(--soft);font-weight:700}
+.it .bd{flex:1;min-width:0}
+.it .tt{font-weight:700}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.pill{display:inline-block;font-size:11px;font-weight:700;border-radius:10px;padding:1px 8px;background:#E6ECF2;color:#33475B}
+.pill.red{background:#FDE7E3;color:var(--red)}.pill.green{background:#E3F3E7;color:var(--green)}.pill.amber{background:#FFF1D6;color:var(--amber)}
+/* tables */
+table.t{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff}
+table.t th{background:#EEF2F6;text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--soft);padding:7px 8px;border-bottom:1px solid var(--line)}
+table.t td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.t td input,table.t td select{padding:5px 7px;font-size:13px}
+.tw{overflow-x:auto}
+.empty{color:var(--soft);font-style:italic;padding:12px;text-align:center}
+/* picker */
+.pk{border:1px solid var(--line);border-radius:8px;padding:10px;background:#FAFCFE}
+.pk-top{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.pk-top input{flex:2 1 160px}.pk-top select{flex:1 1 120px;width:auto}
+.pk-list{max-height:210px;overflow:auto}
+.pk-row{display:flex;gap:8px;align-items:flex-start;padding:5px 4px;border-bottom:1px solid #EEF2F6;font-size:13.5px;cursor:pointer}
+.pk-n{font-size:12px;color:var(--soft);margin-top:6px;font-weight:700}
+/* chat */
+.chat{display:flex;flex-direction:column;height:calc(100vh - 210px);min-height:420px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.chat-list{flex:1;overflow:auto;padding:14px;background:#F4F7FA;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:86%}.msg.me{align-self:flex-end}.msg.ai{align-self:flex-start}
+.bub{padding:10px 14px;border-radius:16px;line-height:1.5;word-wrap:break-word;overflow-wrap:anywhere}
+.msg.me .bub{background:var(--blue);color:#fff;border-bottom-right-radius:4px;white-space:pre-wrap}
+.msg.ai .bub{background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg.err .bub{border-color:#F3B5AE;background:#FDECEA;color:var(--red)}
+.bub pre{white-space:pre-wrap;background:#F2F5F8;padding:8px;border-radius:6px;font-size:12.5px}
+.bub h3,.bub h4{margin:6px 0 4px;color:var(--navy)}
+.bub ul{margin:4px 0;padding-left:20px}
+.mt{font-size:11px;color:var(--soft);margin-top:3px}
+.msg.me .mt{text-align:right}
+.mact{display:flex;gap:6px;margin-top:5px}
+.files{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.fchip{background:#E6ECF2;border-radius:12px;padding:2px 9px;font-size:12px;display:inline-flex;gap:6px;align-items:center}
+.fchip b{cursor:pointer;color:var(--red)}
+.chat-in{display:flex;gap:8px;align-items:flex-end;padding:10px;border-top:1px solid var(--line);background:#fff}
+.chat-in textarea{min-height:46px;max-height:200px}
+.att{font-size:22px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#EEF3F8;cursor:pointer;line-height:1}
+/* drop zone */
+.drop{border:2px dashed #9CB4CC;border-radius:10px;padding:22px;text-align:center;background:#F7FAFD;cursor:pointer}
+.drop.over{background:var(--tint);border-color:var(--blue)}
+.result{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;max-height:520px;overflow:auto}
+iframe.prev{width:100%;height:560px;border:1px solid var(--line);border-radius:8px;background:#F4F6F8}
+.twocol{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1000px){.twocol{grid-template-columns:1fr}}
+.toasts{position:fixed;right:16px;bottom:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:360px}
+.toast{background:#fff;border:1px solid var(--line);border-left:5px solid var(--blue);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px 30px 10px 12px;position:relative;font-size:13.5px}
+.toast.bad{border-left-color:var(--red)}.toast.good{border-left-color:var(--green)}.toast.rem{border-left-color:var(--amber)}
+.toast .x{position:absolute;right:6px;top:2px;border:0;background:none;color:#777;font-size:18px;padding:0 4px}
+details.box{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:#FAFCFE;margin-bottom:12px}
+details.box summary{cursor:pointer;font-weight:700;color:var(--navy)}
+code{background:#EEF2F6;padding:1px 5px;border-radius:4px;font-size:12.5px}
+.task-done td{opacity:.55}.task-done .ttl{text-decoration:line-through}
+.over{color:var(--red);font-weight:700}
+/* shell */
+.shell{min-height:100vh}
+.side{position:fixed;left:0;top:0;bottom:0;width:240px;z-index:60;background:var(--navy2);color:#E8EEF4;display:flex;flex-direction:column;overflow:auto;transform:translateX(-100%);transition:transform .22s ease}
+body.menu-open .side{transform:none;box-shadow:6px 0 28px rgba(0,0,0,.32)}
+.scrim{display:none;position:fixed;inset:0;background:rgba(10,20,30,.35);z-index:55}
+body.menu-open:not(.pinned) .scrim{display:block}
+.brand{padding:16px 14px 12px 18px;border-bottom:1px solid #2A4562}
+.brand-btns{display:flex;gap:6px;margin-top:10px}
+.brand b{display:block;font-size:16px;color:#fff}
+.brand span{font-size:11px;color:#9FB3C6;text-transform:uppercase;letter-spacing:.08em}
+.sidebtn{background:transparent;border:1px solid #2F4D6C;color:#C8D5E1;padding:3px 8px;font-size:12px;border-radius:6px}
+.sidebtn:hover{background:#1E3A57;color:#fff}
+.sidebtn.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.menu{padding:10px;display:flex;flex-direction:column;gap:2px}
+.menu button{background:transparent;border:0;color:#C8D5E1;text-align:left;padding:11px 12px;border-radius:7px;display:flex;gap:10px;align-items:center;font-size:14.5px}
+.menu button:hover{background:#1E3A57;color:#fff}
+.menu button.on{background:var(--blue);color:#fff}
+.menu .badge{margin-left:auto;background:#C0392B;color:#fff;border-radius:9px;font-size:11px;padding:0 6px}
+.side .foot{margin-top:auto;padding:12px 16px;font-size:12px;color:#9FB3C6}
+.main{min-width:0;display:flex;flex-direction:column;min-height:100vh;transition:margin-left .22s ease}
+@media (min-width:861px){body.pinned.menu-open .main{margin-left:240px}body.pinned.menu-open .side{box-shadow:none}}
+.top{background:#fff;border-bottom:1px solid var(--line);padding:8px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20;min-height:52px}
+.top .clock{margin-left:auto;font-size:13px;color:var(--soft);font-weight:600;white-space:nowrap}
+.iconbtn{border:1px solid var(--line);background:#fff;color:var(--navy);padding:6px 11px;font-size:14px;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.iconbtn:hover{background:var(--tint);color:var(--navy)}
+#menuBtn{font-size:18px;padding:4px 11px}
+.wrap{padding:16px 20px 40px;width:100%}
+.view{display:none}.view.on{display:block}
+@media (max-width:860px){
+ .side{width:min(82vw,290px)}
+ .wrap{padding:12px 10px 50px}
+ .top .clock{display:none}
+ #fsBtn span{display:none}
+}
+.aswrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.aswrap .chat{height:calc(100vh - 90px)}
+.libcard{max-height:calc(100vh - 90px);overflow:auto;margin:0}
+@media (max-width:1000px){.aswrap{grid-template-columns:1fr}.aswrap .chat{height:calc(100vh - 120px)}}
+.librow{display:flex;gap:6px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.librow .nm{flex:1;min-width:0;word-break:break-word}
+.msg.note{align-self:center;max-width:94%;width:94%}
+.msg.note .bub{background:#FFF8E8;border:1px solid #F0D9A8;font-size:13.5px;border-radius:10px}
+.msg.note.ok .bub{background:#EEF8F0;border-color:#BFE0C6}
+.msg.note .bub pre{max-height:240px;overflow:auto}
+.msg.note iframe{width:100%;height:320px;border:1px solid var(--line);border-radius:6px;background:#fff}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="scrim" id="scrim"></div>
+  <aside class="side" id="side">
+    <div class="brand"><div><b>My Planner &amp; Mail</b><span>Personal &middot; Calendar &middot; Email &middot; AI</span></div>
+      <div class="brand-btns"><button class="sidebtn" id="pinBtn" title="Keep the menu open beside the page">&#128204; Keep open</button><button class="sidebtn" id="hideBtn" title="Hide the menu">&times; Hide</button></div></div>
+    <nav class="menu" id="menu"></nav>
+    <div class="foot" id="sideFoot">Saved in this browser only.</div>
+  </aside>
+  <div class="main">
+    <div class="top"><button class="iconbtn" id="menuBtn" title="Show / hide the main menu">&#9776;</button><b id="topTitle" style="color:var(--navy);font-size:16px"></b><span class="clock" id="clock"></span><button class="iconbtn" id="fsBtn" title="Full screen">&#x26F6; <span>Full screen</span></button></div>
+    <div class="wrap">
+
+<!-- CALENDAR -->
+<section class="view" id="v-calendar">
+  <div class="calwrap">
+    <div>
+      <div class="calbar">
+        <button class="ghost" id="calPrev">&lsaquo;</button><b id="calLabel"></b><button class="ghost" id="calNext">&rsaquo;</button>
+        <button class="ghost" id="calToday">Today</button>
+        <span class="seg"><button id="calMonth" class="on">Month</button><button id="calWeek">Week</button></span>
+        <span style="flex:1"></span>
+        <button class="ghost" id="calPanel">Hide day panel</button>
+        <button class="primary" id="calAddEv">+ Event / Appointment</button>
+      </div>
+      <div class="calgrid" id="calGrid"></div>
+    </div>
+    <div class="calside">
+      <div class="card"><h3 id="dayTitle"></h3><div id="dayList"></div>
+        <div class="btns" style="margin-top:10px"><button class="ghost sm" id="dayAddEv">+ Event this day</button><button class="ghost sm" id="dayAddTask">+ Task this day</button><button class="ghost sm" id="dayEmail">&#9993; Email this day</button></div></div>
+      <div class="card"><h3 style="display:flex;align-items:center;gap:8px">Next 14 days<button class="ghost sm" id="upEmail" style="margin-left:auto">&#9993; Email this list</button></h3><div id="upList"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- REMINDERS -->
+<section class="view" id="v-reminders">
+  <h1 class="pt">Reminders &amp; Appointments</h1>
+  <div class="sub">Add one, or several at once. Each can remind you on screen and by email, and can email a reminder to people you choose.</div>
+  <div class="twocol">
+    <div class="card">
+      <h3 id="evFormTitle">Add an Event or Appointment</h3>
+      <div class="row">
+        <div class="field" style="flex:2 1 240px"><label class="l">Title</label><input type="text" id="evTitle"></div>
+        <div class="field"><label class="l">Type</label><select id="evType"></select></div>
+      </div>
+      <div class="row">
+        <div class="field"><label class="l">Date</label><input type="date" id="evDate"></div>
+        <div class="field"><label class="l">Start time</label><input type="time" id="evTime"></div>
+        <div class="field"><label class="l">End time</label><input type="time" id="evEnd"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="evAllDay"> All day</label>
+      <div class="row">
+        <div class="field" style="flex:2 1 240px"><label class="l">Location</label><input type="text" id="evLoc"></div>
+        <div class="field"><label class="l">Repeats</label><select id="evRepeat"><option value="none">Does not repeat</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="yearly">Every year</option></select></div>
+        <div class="field"><label class="l">Repeat until (optional)</label><input type="date" id="evUntil"></div>
+      </div>
+      <div class="field"><label class="l">Notes</label><textarea id="evNotes"></textarea></div>
+      <div class="row">
+        <div class="field"><label class="l">Remind me</label><select id="evRemind"></select></div>
+        <div class="field"><label class="l">Status</label><select id="evStatus"><option>Scheduled</option><option>Completed</option><option>Cancelled</option></select></div>
+      </div>
+      <label class="check"><input type="checkbox" id="evEmailMe"> Email the reminder to me</label>
+      <label class="check"><input type="checkbox" id="evEmailOthers"> Also email the reminder to these people:</label>
+      <div id="evPickWrap" style="display:none">
+        <div class="pk" id="evPicker"></div>
+        <div class="field" style="margin-top:8px"><label class="l">Other email addresses (not in contacts)</label><input type="text" id="evExtra" placeholder="name@example.com, other@example.com"></div>
+      </div>
+      <div class="btns" style="margin-top:10px">
+        <button class="primary" id="evSave">Save</button>
+        <button class="ghost" id="evCancel" style="display:none">Cancel edit</button>
+        <button class="ghost" id="evEmailNow">Email this to people&hellip;</button>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Add several at once</h3>
+        <div class="tw"><table class="t" id="bulkTbl"><thead><tr><th>Title</th><th>Type</th><th>Date</th><th>Time</th><th>Location</th><th>Remind</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="btns" style="margin-top:8px"><button class="ghost sm" id="bulkRow">+ Row</button><button class="primary sm" id="bulkSave">Save all rows</button></div>
+      </div>
+      <div class="card">
+        <h3>All events &amp; appointments</h3>
+        <div class="row">
+          <div class="field" style="flex:2 1 180px"><input type="text" id="evSearch" placeholder="Search…"></div>
+          <div class="field"><select id="evFilter"><option value="up">Upcoming</option><option value="past">Past</option><option value="all">All</option></select></div>
+        </div>
+        <div id="evList"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DO LIST -->
+<section class="view" id="v-todo">
+  <h1 class="pt">Do List</h1>
+  <div class="sub">Type one task per line to add many at once. Tasks with a due date show on the Calendar.</div>
+  <div class="card">
+    <div class="field"><label class="l">New tasks (one per line)</label><textarea id="tdNew" placeholder=""></textarea></div>
+    <div class="row">
+      <div class="field"><label class="l">Category</label><select id="tdCat"></select></div>
+      <div class="field"><label class="l">Priority</label><select id="tdPri"><option>Normal</option><option>High</option><option>Low</option></select></div>
+      <div class="field"><label class="l">Due date (optional)</label><input type="date" id="tdDue"></div>
+      <div class="field"><label class="l">Due time (optional)</label><input type="time" id="tdTime"></div>
+      <div class="field"><label class="l">Remind me</label><select id="tdRemind"></select></div>
+    </div>
+    <button class="primary" id="tdAdd">Add tasks</button>
+  </div>
+  <div class="card">
+    <div class="row">
+      <div class="field" style="flex:2 1 200px"><input type="text" id="tdSearch" placeholder="Search tasks…"></div>
+      <div class="field"><select id="tdFStatus"><option value="open">Open</option><option value="done">Done</option><option value="all">All</option></select></div>
+      <div class="field"><select id="tdFCat"></select></div>
+      <div class="field"><select id="tdSort"><option value="due">Sort by due date</option><option value="pri">Sort by priority</option><option value="new">Newest first</option></select></div>
+    </div>
+    <div class="tw"><table class="t"><thead><tr><th style="width:34px"></th><th>Task</th><th>Category</th><th>Priority</th><th>Due</th><th>Time</th><th>Remind</th><th></th></tr></thead><tbody id="tdBody"></tbody></table></div>
+    <div class="btns" style="margin-top:8px"><button class="ghost sm" id="tdEmail">&#9993; Email the tasks shown</button><button class="ghost sm" id="tdClearDone">Delete all done tasks</button></div>
+  </div>
+</section>
+
+<!-- CONTACTS -->
+<section class="view" id="v-contacts">
+  <h1 class="pt">Contacts</h1>
+  <div class="sub">Family, friends and anyone you email. Groups are set in Settings.</div>
+  <div class="twocol">
+    <div class="card">
+      <h3 id="ctFormTitle">Add a Contact</h3>
+      <div class="row">
+        <div class="field" style="flex:0 1 120px"><label class="l">Title</label><select id="ctTitle"><option value="">None</option><option>Mr.</option><option>Mrs.</option><option>Miss</option><option>Ms.</option><option>Dr.</option><option>Rev.</option></select></div>
+        <div class="field" style="flex:2 1 220px"><label class="l">Full name</label><input type="text" id="ctName"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label class="l">Email</label><input type="email" id="ctEmail"></div>
+        <div class="field"><label class="l">Phone</label><input type="tel" id="ctPhone"></div>
+        <div class="field"><label class="l">Group</label><select id="ctGroup"></select></div>
+      </div>
+      <div class="field"><label class="l">Mailing address</label><textarea id="ctAddr" style="min-height:52px" placeholder="P.O. Box 1234&#10;Pago Pago, AS 96799"></textarea></div>
+      <div class="field"><label class="l">Birthday (optional)</label><input type="date" id="ctBday"></div>
+      <div class="field"><label class="l">Notes</label><textarea id="ctNotes" style="min-height:52px"></textarea></div>
+      <div class="btns"><button class="primary" id="ctSave">Save contact</button><button class="ghost" id="ctCancel" style="display:none">Cancel edit</button></div>
+      <div class="note" style="margin-top:10px">Title is used only if you set it — it is never guessed. A birthday adds a yearly event to your calendar.</div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <div class="field" style="flex:2 1 200px"><input type="text" id="ctSearch" placeholder="Search name, email, phone…"></div>
+        <div class="field"><select id="ctFGroup"></select></div>
+      </div>
+      <div class="btns" style="margin-bottom:10px">
+        <label class="att" style="font-size:13px;font-weight:600" for="ctImport">Import .vcf / .csv</label><input type="file" id="ctImport" accept=".vcf,.csv,text/vcard,text/csv" multiple style="display:none">
+        <button class="ghost sm" id="ctEmailSel">Email selected</button>
+        <span class="note" id="ctCount"></span>
+      </div>
+      <div id="ctList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- EMAIL -->
+<section class="view" id="v-email">
+  <h1 class="pt">Email</h1>
+  <div class="sub">Send to saved contacts and to any address. Write it yourself, or have the AI write it and design it as an HTML email.</div>
+  <div class="twocol">
+    <div>
+      <div class="card">
+        <h3>To</h3>
+        <div class="pk" id="emPicker"></div>
+        <div class="field" style="margin-top:10px"><label class="l">Other email addresses (not in contacts)</label><input type="text" id="emExtra" placeholder="name@example.com, other@example.com"></div>
+        <div class="note">Each person gets their own email. Type <code>{name}</code> in the subject or message to put each person&rsquo;s saved name there.</div>
+      </div>
+      <div class="card">
+        <h3>Message</h3>
+        <div class="field"><label class="l">Subject</label><input type="text" id="emSubject"></div>
+        <div class="field"><label class="l">Message</label><textarea id="emBody" style="min-height:220px"></textarea></div>
+        <div class="row">
+          <div class="field"><label class="l">Send as</label><select id="emFormat"><option value="text">Plain text</option><option value="html">Designed HTML email</option></select></div>
+          <div class="field" style="align-self:flex-end"><label class="check"><input type="checkbox" id="emSig"> Add my signature (Settings)</label></div>
+        </div>
+        <div class="btns"><button class="primary" id="emSend">Send email</button><button class="ghost" id="emClear">Clear</button><span class="note" id="emMsg"></span></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>&#10024; AI: Write the email</h3>
+        <div class="field"><label class="l">What should the email say?</label><textarea id="awAsk" placeholder="Tell the AI what to write, who it is for and any facts it must include."></textarea></div>
+        <div class="row">
+          <div class="field"><label class="l">Tone</label><select id="awTone"><option>Neutral</option><option>Formal</option><option>Professional</option><option>Friendly</option><option>Brief and direct</option></select></div>
+          <div class="field"><label class="l">Length</label><select id="awLen"><option>Short</option><option selected>Medium</option><option>Long</option></select></div>
+        </div>
+        <div class="field"><label class="l">Use information from files (any type)</label><input type="file" id="awFiles" multiple><div class="files" id="awFileList"></div></div>
+        <label class="check"><input type="checkbox" id="awKeep"> Rewrite what is already in the message box instead of starting new</label>
+        <div class="btns"><button class="primary" id="awGo">Write it</button><span class="note" id="awMsg"></span></div>
+      </div>
+      <div class="card">
+        <h3>&#127912; AI: Design the HTML email</h3>
+        <div class="row">
+          <div class="field"><label class="l">Style</label><select id="adStyle"><option>Clean and simple</option><option>Modern card</option><option>Bold header banner</option><option>Newsletter</option><option>Formal letter</option><option>Event invitation</option></select></div>
+          <div class="field" style="flex:0 1 110px"><label class="l">Color</label><input type="color" id="adColor" value="#14324F"></div>
+        </div>
+        <div class="field"><label class="l">Image link to include (optional)</label><input type="text" id="adImg" placeholder="https://…"></div>
+        <div class="field"><label class="l">Design instructions (optional)</label><textarea id="adAsk" style="min-height:52px" placeholder="Layout, colors, a button, what to highlight…"></textarea></div>
+        <div class="btns"><button class="primary" id="adGo">Design it</button><button class="ghost sm" id="adEdit">Edit HTML</button><button class="ghost sm" id="adDrop">Remove design</button><span class="note" id="adMsg"></span></div>
+        <textarea id="adHtml" style="display:none;min-height:200px;font-family:monospace;font-size:12px;margin-top:8px"></textarea>
+        <div style="margin-top:10px"><iframe class="prev" id="adPrev" sandbox="" title="Email preview"></iframe></div>
+        <div class="note">The design uses only your subject and message words. The AI does not add sentences.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Sent</h3>
+    <div class="row"><div class="field" style="flex:2 1 200px"><input type="text" id="snSearch" placeholder="Search sent emails…"></div></div>
+    <div id="snList"></div>
+  </div>
+</section>
+
+<!-- ASSISTANT -->
+<section class="view" id="v-assistant">
+  <div class="aswrap">
+    <div class="chat">
+      <div class="chat-list" id="chList"></div>
+      <div style="padding:6px 10px 0;border-top:1px solid var(--line);display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+        <label class="check"><input type="checkbox" id="chSave" checked> Save attached files to My Files</label>
+        <div class="files" id="chFileList"></div>
+        <button class="ghost sm" id="chClear" style="margin-left:auto">Clear chat</button>
+      </div>
+      <div class="chat-in">
+        <label class="att" for="chFiles" title="Attach files">&#128206;</label><input type="file" id="chFiles" multiple style="display:none">
+        <textarea id="chIn" rows="1" placeholder="Ask or tell it to do anything&hellip; (Enter to send, Shift+Enter for a new line)"></textarea>
+        <button class="primary" id="chSend">Send</button>
+      </div>
+    </div>
+    <div class="card libcard">
+      <h3>&#128193; My Files</h3>
+      <div class="note" style="margin-bottom:8px">Files kept here stay in this browser. Ask the Assistant about any of them by name, any time.</div>
+      <div class="btns" style="margin-bottom:8px"><label class="att" style="font-size:13px;font-weight:600" for="libAdd">+ Add files</label><input type="file" id="libAdd" multiple style="display:none"></div>
+      <input type="text" id="libSearch" placeholder="Search files&hellip;" style="margin-bottom:8px">
+      <div id="libList"></div>
+      <div class="note" id="libUse" style="margin-top:8px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- EXTRACT -->
+<section class="view" id="v-extract">
+  <h1 class="pt">File Extractor</h1>
+  <div class="sub">Drop in any files &mdash; PDF, Word, Excel, PowerPoint, pictures and phone photos, text, email, web pages, zip files and more. The AI pulls out what you ask for.</div>
+  <div class="twocol">
+    <div class="card">
+      <div class="drop" id="exDrop"><b>Drop files here</b> or click to choose<br><span class="note">Any type, several at once</span></div>
+      <input type="file" id="exFiles" multiple style="display:none">
+      <div class="files" id="exFileList" style="margin:10px 0"></div>
+      <div class="row"><div class="field"><select id="exLib"></select></div></div>
+      <label class="check" style="margin-bottom:10px"><input type="checkbox" id="exSave" checked> Save these files to My Files (so the Assistant can pull them up later)</label>
+      <div class="field"><label class="l">What to pull out</label><select id="exMode">
+        <option value="all">Everything — full summary and all key details</option>
+        <option value="text">All the text, word for word</option>
+        <option value="tables">Tables and numbers</option>
+        <option value="events">Dates, events and appointments (add to calendar)</option>
+        <option value="tasks">Tasks and things to do (add to Do List)</option>
+        <option value="contacts">Names, emails and phone numbers (add to contacts)</option>
+        <option value="custom">My own question</option>
+      </select></div>
+      <div class="field" id="exAskWrap" style="display:none"><label class="l">Your question</label><textarea id="exAsk"></textarea></div>
+      <div class="btns"><button class="primary" id="exGo">Extract</button><span class="note" id="exMsg"></span></div>
+    </div>
+    <div class="card">
+      <h3>Result</h3>
+      <div class="result" id="exOut"><div class="empty">The result appears here.</div></div>
+      <div class="btns" style="margin-top:10px"><button class="ghost sm" id="exCopy">Copy</button><button class="ghost sm" id="exToEmail">Put in an email</button><button class="ghost sm" id="exToChat">Ask the Assistant about it</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- SETTINGS -->
+<section class="view" id="v-settings">
+  <h1 class="pt">Settings</h1>
+  <div class="sub">Set these once. Everything is saved in this browser.</div>
+  <div class="twocol">
+    <div>
+      <div class="card">
+        <h3>About me</h3>
+        <div class="row">
+          <div class="field"><label class="l">My name (shown as sender)</label><input type="text" id="sName"></div>
+          <div class="field"><label class="l">My email (reminders go here)</label><input type="email" id="sEmail"></div>
+        </div>
+        <div class="field"><label class="l">My signature (only used when you tick &ldquo;Add my signature&rdquo;)</label><textarea id="sSig"></textarea></div>
+      </div>
+      <div class="card">
+        <h3>AI (Anthropic)</h3>
+        <div class="field"><label class="l">Anthropic API key</label><input type="password" id="sKey" placeholder="sk-ant-…" autocomplete="off"></div>
+        <div class="field"><label class="l">Workspace ID (only if your key needs one)</label><input type="text" id="sWs" placeholder="wrkspc_…"></div>
+        <div class="btns"><button class="ghost sm" id="sKeyFind">Use the key from my other tools</button><button class="ghost sm" id="sKeyTest">Test the AI</button><span class="note" id="sKeyMsg"></span></div>
+        <div class="note" style="margin-top:6px">The key is shared with your other tools that are opened from the same web address (for example the same GitHub Pages site). It is sent only to api.anthropic.com.</div>
+      </div>
+      <div class="card">
+        <h3>Email (EmailJS)</h3>
+        <div class="row">
+          <div class="field"><label class="l">Service ID</label><input type="text" id="sEjS" placeholder="service_…"></div>
+          <div class="field"><label class="l">Template ID</label><input type="text" id="sEjT" placeholder="template_…"></div>
+          <div class="field"><label class="l">Public Key</label><input type="text" id="sEjK"></div>
+        </div>
+        <div class="btns"><button class="ghost sm" id="sEjFind">Copy from CaseWork</button><button class="ghost sm" id="sEjTest">Send me a test email</button><span class="note" id="sEjMsg"></span></div>
+        <details class="box" style="margin-top:10px"><summary>EmailJS template (paste once)</summary>
+          <ol class="note" style="padding-left:18px">
+            <li>EmailJS &rarr; Email Templates &rarr; your template. Set <b>To Email</b> to <code>{{to_email}}</code>, <b>Subject</b> to <code>{{subject}}</code>, <b>From Name</b> to <code>{{from_name}}</code>, <b>Reply To</b> to <code>{{reply_to}}</code>.</li>
+            <li>Content &rarr; Code Editor: paste the code below. It shows the designed email when there is one, otherwise the plain text. CaseWork&rsquo;s template already works too.</li>
+          </ol>
+          <textarea readonly id="sTpl" style="font-family:monospace;font-size:12px;min-height:90px"></textarea>
+          <button class="ghost sm" id="sTplCopy">Copy template</button>
+        </details>
+        <div class="note">Free EmailJS accounts allow about 200 emails a month and one email per second. Emails and reminder emails send only while this page is open.</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Lists used in the drop-downs</h3>
+        <div class="field"><label class="l">Event types (one per line)</label><textarea id="sTypes"></textarea></div>
+        <div class="field"><label class="l">Do List categories</label><textarea id="sCats"></textarea></div>
+        <div class="field"><label class="l">Contact groups</label><textarea id="sGroups"></textarea></div>
+        <div class="field"><label class="l">Default reminder for new events</label><select id="sDefRem"></select></div>
+      </div>
+      <div class="card">
+        <h3>Notifications</h3>
+        <div class="btns"><button class="ghost sm" id="sNotif">Turn on desktop notifications</button><span class="note" id="sNotifMsg"></span></div>
+        <div class="note" style="margin-top:6px">Reminders always pop up on this page. Desktop notifications also show when this tab is in the background.</div>
+      </div>
+      <div class="card">
+        <h3>Backup</h3>
+        <div class="btns">
+          <button class="ghost sm" id="sExport">Download backup</button>
+          <label class="att" style="font-size:13px;font-weight:600" for="sImport">Restore backup</label><input type="file" id="sImport" accept=".json" style="display:none">
+          <button class="danger sm" id="sClearSent">Clear sent list</button>
+        </div>
+        <div class="note" style="margin-top:6px">The backup holds your events, tasks, contacts, sent emails and settings. Your API key is not included.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+    </div>
+  </div>
+</div>
+<div class="toasts" id="toasts"></div>
+<script>
+(function(){"use strict";
+/* ============ CORE ============ */
+var $=function(id){return document.getElementById(id);};
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+var KEY="ppm_data_v1", APIKEY="shared_anthropic_api_key", MODEL="claude-sonnet-4-6";
+var REMINDS=[["-1","No reminder"],["0","At the time"],["10","10 minutes before"],["30","30 minutes before"],["60","1 hour before"],["120","2 hours before"],["1440","1 day before"],["2880","2 days before"],["10080","1 week before"]];
+var DEF_SETTINGS={myName:"",myEmail:"",signature:"",workspace:"",ej:{service:"",template:"",key:""},
+  eventTypes:["Appointment","Meeting","Event","Birthday","Bill due","Call","Church","Travel","Other"],
+  taskCats:["Personal","Home","Work","Errands","Health","Family","Other"],
+  groups:["Family","Friends","Work","Church","Other"],defRemind:"60"};
+var D;
+function load(){
+  try{D=JSON.parse(localStorage.getItem(KEY)||"null");}catch(e){D=null;}
+  if(!D||typeof D!=="object")D={};
+  ["events","tasks","contacts","sent","chat"].forEach(function(k){if(!Array.isArray(D[k]))D[k]=[];});
+  if(!D.notified||typeof D.notified!=="object")D.notified={};
+  var s=D.settings||{};D.settings=Object.assign({},DEF_SETTINGS,s);
+  D.settings.ej=Object.assign({service:"",template:"",key:""},s.ej||{});
+  ["eventTypes","taskCats","groups"].forEach(function(k){if(!Array.isArray(D.settings[k])||!D.settings[k].length)D.settings[k]=DEF_SETTINGS[k].slice();});
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(D));}
+  catch(e){
+    if(D.chat.length>20){D.chat=D.chat.slice(-20);try{localStorage.setItem(KEY,JSON.stringify(D));toast("Storage was full. Older chat messages were removed.","bad");return;}catch(e2){}}
+    toast("Could not save: browser storage is full. Download a backup in Settings.","bad",9000);
+  }
+}
+function toast(msg,kind,ms){
+  var t=document.createElement("div");t.className="toast "+(kind||"");
+  t.innerHTML='<button class="x" title="Close">&times;</button>'+(String(msg).indexOf("<")===0?msg:esc(msg));
+  t.querySelector(".x").onclick=function(){t.remove();};
+  $("toasts").appendChild(t);
+  if(ms!==0)setTimeout(function(){t.remove();},ms||4500);
+  return t;
+}
+/* dates */
+function pad(n){return (n<10?"0":"")+n;}
+function iso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+function parse(s){if(!s)return null;var p=String(s).split("-");if(p.length<3)return null;var d=new Date(+p[0],+p[1]-1,+p[2]);return isNaN(d)?null:d;}
+function today(){return iso(new Date());}
+function addDays(s,n){var d=parse(s);d.setDate(d.getDate()+n);return iso(d);}
+function fmtD(s,long){var d=parse(s);if(!d)return "";return d.toLocaleDateString(undefined,long?{weekday:"long",month:"long",day:"numeric",year:"numeric"}:{weekday:"short",month:"short",day:"numeric",year:"numeric"});}
+function fmtT(t){if(!t)return "";var p=t.split(":"),h=+p[0],m=p[1];return ((h%12)||12)+":"+m+(h<12?" AM":" PM");}
+function dtOf(date,time){var d=parse(date);if(!d)return null;if(time){var p=time.split(":");d.setHours(+p[0],+p[1],0,0);}return d;}
+function addMonths(s,n){var d=parse(s),day=d.getDate();var x=new Date(d.getFullYear(),d.getMonth()+n,1);var last=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();x.setDate(Math.min(day,last));return iso(x);}
+function validEmail(e){return /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(String(e||"").trim());}
+function splitEmails(s){return String(s||"").split(/[\s,;]+/).map(function(x){return x.trim().replace(/^<|>$/g,"");}).filter(Boolean);}
+function optList(list,sel,blank){return (blank!=null?'<option value="">'+esc(blank)+'</option>':"")+list.map(function(v){return '<option'+(v===sel?" selected":"")+'>'+esc(v)+'</option>';}).join("");}
+function remindOpts(sel){return REMINDS.map(function(r){return '<option value="'+r[0]+'"'+(String(sel)===r[0]?" selected":"")+'>'+r[1]+'</option>';}).join("");}
+function remindLabel(v){for(var i=0;i<REMINDS.length;i++)if(REMINDS[i][0]===String(v))return REMINDS[i][1];return "";}
+var PAL=["#1F6FB2","#1E7B34","#8E44AD","#B4690E","#C0392B","#16808A","#5D4E9E","#9C5B26","#2E5E8C"];
+function colorFor(type){var i=D.settings.eventTypes.indexOf(type);if(i<0)i=PAL.length-1;return PAL[i%PAL.length];}
+/* recurrence */
+function occ(ev,from,to){
+  var out=[];if(!ev.date)return out;
+  var rep=ev.repeat||"none",until=ev.until||"9999-12-31";
+  if(rep==="none"){if(ev.date>=from&&ev.date<=to)out.push(ev.date);return out;}
+  var n0=0;
+  if(ev.date<from){
+    var a=parse(ev.date),b=parse(from),days=Math.floor((b-a)/864e5);
+    if(rep==="daily")n0=Math.max(0,days-1);
+    else if(rep==="weekly")n0=Math.max(0,Math.floor(days/7)-1);
+    else if(rep==="monthly")n0=Math.max(0,(b.getFullYear()-a.getFullYear())*12+b.getMonth()-a.getMonth()-1);
+    else if(rep==="yearly")n0=Math.max(0,b.getFullYear()-a.getFullYear()-1);
+  }
+  for(var n=n0,guard=0;guard<800;n++,guard++){
+    var d=rep==="daily"?addDays(ev.date,n):rep==="weekly"?addDays(ev.date,7*n):rep==="monthly"?addMonths(ev.date,n):addMonths(ev.date,12*n);
+    if(d>to||d>until)break;
+    if(d>=from)out.push(d);
+  }
+  return out;
+}
+function bdayEvents(){
+  return D.contacts.filter(function(c){return c.bday;}).map(function(c){
+    return {id:"bd_"+c.id,title:"Birthday: "+c.name,type:"Birthday",date:c.bday,allDay:true,repeat:"yearly",remind:"-1",status:"Scheduled",fromContact:true,contactId:c.id};
+  });
+}
+function allEvents(){return D.events.concat(bdayEvents());}
+function itemsBetween(from,to){
+  var out=[];
+  allEvents().forEach(function(ev){occ(ev,from,to).forEach(function(d){out.push({kind:"ev",ev:ev,date:d,time:ev.allDay?"":(ev.time||"")});});});
+  D.tasks.forEach(function(t){if(t.due&&t.due>=from&&t.due<=to)out.push({kind:"task",task:t,date:t.due,time:t.time||""});});
+  out.sort(function(a,b){return (a.date+(a.time||"00:00")).localeCompare(b.date+(b.time||"00:00"));});
+  return out;
+}
+function nextOcc(ev){var t=today();var o=occ(ev,t,addDays(t,3660));return o[0]||null;}
+/* ============ MENU ============ */
+var TABS=[["calendar","&#128197;","Calendar"],["reminders","&#9200;","Reminders"],["todo","&#9989;","Do List"],["contacts","&#128101;","Contacts"],["email","&#9993;&#65039;","Email"],["assistant","&#128172;","AI Assistant"],["extract","&#128196;","File Extractor"],["settings","&#9881;&#65039;","Settings"]];
+var cur="calendar";
+function renderMenu(){
+  var t=today(),due=D.tasks.filter(function(x){return !x.done&&x.due&&x.due<=t;}).length;
+  $("menu").innerHTML=TABS.map(function(x){
+    var b=(x[0]==="todo"&&due)?'<span class="badge">'+due+'</span>':"";
+    return '<button data-tab="'+x[0]+'" class="'+(x[0]===cur?"on":"")+'"><span>'+x[1]+'</span>'+x[2]+b+'</button>';
+  }).join("");
+}
+$("menu").addEventListener("click",function(e){var b=e.target.closest("button[data-tab]");if(b)show(b.getAttribute("data-tab"));});
+function show(v){
+  cur=v;
+  document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="v-"+v);});
+  var t=TABS.filter(function(x){return x[0]===v;})[0];$("topTitle").textContent=t?t[2]:"";
+  renderMenu();
+  ({calendar:renderCalendar,reminders:renderReminders,todo:renderTodo,contacts:renderContacts,email:renderEmail,assistant:renderChat,extract:renderLib,settings:renderSettings})[v]();
+  window.scrollTo(0,0);
+  if(!(UI.pin&&wide()))document.body.classList.remove("menu-open");
+}
+/* menu drawer + full screen */
+function wide(){return window.innerWidth>860;}
+function menuSet(open){document.body.classList.toggle("menu-open",open);if(cur==="calendar")setTimeout(renderCalendar,240);}
+function applyPin(){document.body.classList.toggle("pinned",UI.pin);$("pinBtn").classList.toggle("on",UI.pin);$("pinBtn").innerHTML=UI.pin?"&#128204; Kept open":"&#128204; Keep open";}
+$("menuBtn").onclick=function(){menuSet(!document.body.classList.contains("menu-open"));};
+$("hideBtn").onclick=function(){menuSet(false);};
+$("scrim").onclick=function(){menuSet(false);};
+$("pinBtn").onclick=function(){UI.pin=!UI.pin;saveUI();applyPin();if(UI.pin)menuSet(true);toast(UI.pin?"The menu stays open beside the page. Press ☰ or × to hide it.":"The menu now hides itself after you pick a tab.","good",3500);};
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&document.body.classList.contains("menu-open")&&!(UI.pin&&wide()))menuSet(false);});
+function fsEl(){return document.fullscreenElement||document.webkitFullscreenElement;}
+function fsLabel(){$("fsBtn").innerHTML=fsEl()?"&#x2715; <span>Exit full screen</span>":"&#x26F6; <span>Full screen</span>";}
+$("fsBtn").onclick=function(){
+  var de=document.documentElement;
+  if(fsEl()){(document.exitFullscreen||document.webkitExitFullscreen).call(document);return;}
+  var r=de.requestFullscreen||de.webkitRequestFullscreen;
+  if(!r){toast("This browser does not allow full screen for web pages. On a phone, use the browser menu → Add to Home screen and open it from there.","bad",8000);return;}
+  try{var pr=r.call(de);if(pr&&pr.catch)pr.catch(function(){toast("Full screen was blocked by the browser.","bad");});}catch(e){toast("Full screen was blocked by the browser.","bad");}
+};
+["fullscreenchange","webkitfullscreenchange"].forEach(function(ev){document.addEventListener(ev,function(){fsLabel();if(cur==="calendar")setTimeout(renderCalendar,120);});});
+function tickClock(){var n=new Date();$("clock").textContent=n.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"})+" · "+n.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});}
+/* ============ CONTACT PICKER (shared) ============ */
+function picker(host,sel){
+  var st={q:"",g:""};
+  host.innerHTML='<div class="pk-top"><input type="text" placeholder="Search contacts…"><select></select><button class="ghost sm" data-a="all">Select shown</button><button class="ghost sm" data-a="none">Clear</button></div><div class="pk-list"></div><div class="pk-n"></div>';
+  var q=host.querySelector("input"),g=host.querySelector("select"),list=host.querySelector(".pk-list"),n=host.querySelector(".pk-n");
+  function shown(){
+    var s=st.q.toLowerCase();
+    return D.contacts.filter(function(c){return c.email&&(!st.g||c.group===st.g)&&(!s||(c.name+" "+c.email+" "+(c.group||"")).toLowerCase().indexOf(s)>=0);})
+      .sort(function(a,b){return a.name.localeCompare(b.name);});
+  }
+  function draw(){
+    g.innerHTML=optList(D.settings.groups,st.g,"All groups");
+    var arr=shown();
+    list.innerHTML=arr.length?arr.map(function(c){
+      return '<label class="pk-row"><input type="checkbox" style="width:auto" data-id="'+c.id+'"'+(sel.has(c.id)?" checked":"")+'><span><b>'+esc((c.title?c.title+" ":"")+c.name)+'</b> <span class="muted">&lt;'+esc(c.email)+'&gt;</span>'+(c.group?' <span class="pill">'+esc(c.group)+'</span>':"")+'</span></label>';
+    }).join(""):'<div class="empty">'+(D.contacts.length?"No contacts match.":"No saved contacts yet. Type addresses below.")+'</div>';
+    n.textContent=sel.size+" selected";
+  }
+  q.oninput=function(){st.q=q.value;draw();};
+  g.onchange=function(){st.g=g.value;draw();};
+  list.onchange=function(e){var id=e.target.getAttribute("data-id");if(!id)return;if(e.target.checked)sel.add(id);else sel.delete(id);n.textContent=sel.size+" selected";};
+  host.querySelector('[data-a="all"]').onclick=function(){shown().forEach(function(c){sel.add(c.id);});draw();};
+  host.querySelector('[data-a="none"]').onclick=function(){sel.clear();draw();};
+  draw();
+  return {draw:draw};
+}
+function recipients(sel,extra){
+  var list=[],seen={},bad=[];
+  Array.from(sel||[]).forEach(function(id){var c=D.contacts.filter(function(x){return x.id===id;})[0];if(c&&validEmail(c.email)&&!seen[c.email.toLowerCase()]){seen[c.email.toLowerCase()]=1;list.push({email:c.email.trim(),name:c.name,title:c.title||""});}});
+  splitEmails(extra).forEach(function(e){
+    if(!validEmail(e)){bad.push(e);return;}
+    if(seen[e.toLowerCase()])return;seen[e.toLowerCase()]=1;
+    var c=D.contacts.filter(function(x){return (x.email||"").toLowerCase()===e.toLowerCase();})[0];
+    list.push({email:e,name:c?c.name:"",title:c?(c.title||""):""});
+  });
+  return {list:list,bad:bad};
+}
+/* ============ CALENDAR ============ */
+var cal={m:null,sel:today()};
+function chip(it){
+  if(it.kind==="task")return '<div class="chip task'+(it.task.done?" done":"")+'" title="'+esc(it.task.text)+'">&#9744; '+esc(it.task.text)+'</div>';
+  var ev=it.ev,c=ev.status==="Cancelled"?"#9AA6B2":colorFor(ev.type);
+  return '<div class="chip'+(ev.status!=="Scheduled"?" done":"")+'" style="background:'+c+'" title="'+esc(ev.title)+'">'+(it.time?esc(fmtT(it.time).replace(":00","").replace(" ",""))+" ":"")+esc(ev.title)+'</div>';
+}
+function itemHtml(it,showDate){
+  var when=(showDate?fmtD(it.date)+"<br>":"")+(it.time?fmtT(it.time):(it.kind==="ev"?"All day":""));
+  if(it.kind==="task"){
+    var t=it.task;
+    return '<div class="it"><div class="tm">'+when+'</div><div class="bd"><label class="check" style="margin:0"><input type="checkbox" style="width:auto" data-tdone="'+t.id+'"'+(t.done?" checked":"")+'> <span class="tt" style="'+(t.done?"text-decoration:line-through;opacity:.6":"")+'">'+esc(t.text)+'</span></label><div class="note">Do List · '+esc(t.cat||"")+(t.pri==="High"?' · <span class="pill red">High</span>':"")+'</div><div class="mact"><button class="ghost sm" data-mailtask="'+t.id+'">&#9993; Email</button></div></div></div>';
+  }
+  var ev=it.ev;
+  var st=ev.status==="Completed"?' <span class="pill green">Completed</span>':ev.status==="Cancelled"?' <span class="pill red">Cancelled</span>':"";
+  return '<div class="it"><div class="tm">'+when+'</div><div class="bd"><div class="tt"><span class="dot" style="background:'+colorFor(ev.type)+'"></span>'+esc(ev.title)+st+'</div><div class="note">'+esc(ev.type||"")+(ev.endTime&&!ev.allDay?" · until "+fmtT(ev.endTime):"")+(ev.location?" · "+esc(ev.location):"")+'</div>'+(ev.fromContact?"":'<div class="mact"><button class="ghost sm" data-evedit="'+ev.id+'">Edit</button><button class="ghost sm" data-mailev="'+ev.id+'" data-d="'+it.date+'">&#9993; Email</button></div>')+'</div></div>';
+}
+var UI={pin:false,panel:true,view:"month"};
+try{Object.assign(UI,JSON.parse(localStorage.getItem("ppm_ui")||"{}"));}catch(e){}
+function saveUI(){try{localStorage.setItem("ppm_ui",JSON.stringify(UI));}catch(e){}}
+function weekStart(ds){var d=parse(ds);return addDays(ds,-d.getDay());}
+function renderCalendar(){
+  if(!cal.m){var d0=parse(cal.sel);cal.m=new Date(d0.getFullYear(),d0.getMonth(),1);}
+  var wk=UI.view==="week",t=today(),from,days,m=cal.m.getMonth();
+  $("calMonth").classList.toggle("on",!wk);$("calWeek").classList.toggle("on",wk);
+  document.body.classList.toggle("nopanel",!UI.panel);$("calPanel").textContent=UI.panel?"Hide day panel":"Show day panel";
+  if(wk){
+    from=weekStart(cal.sel);days=7;var e=addDays(from,6),f1=parse(from),e1=parse(e);
+    var mo=function(x){return x.toLocaleDateString(undefined,{month:"short"});};
+    $("calLabel").textContent=mo(f1)+" "+f1.getDate()+(f1.getFullYear()!==e1.getFullYear()?", "+f1.getFullYear():"")+" – "+(f1.getMonth()!==e1.getMonth()?mo(e1)+" ":"")+e1.getDate()+", "+e1.getFullYear();
+  }else{
+    var first=new Date(cal.m.getFullYear(),m,1);from=iso(new Date(cal.m.getFullYear(),m,1-first.getDay()));days=42;
+    $("calLabel").textContent=cal.m.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+  }
+  var items=itemsBetween(from,addDays(from,days-1)),by={};
+  items.forEach(function(it){(by[it.date]=by[it.date]||[]).push(it);});
+  var names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],h="";
+  for(var j=0;j<7;j++){var hd=parse(addDays(from,j));h+='<div class="dow">'+names[j]+(wk?" "+hd.getDate():"")+'</div>';}
+  for(var i=0;i<days;i++){
+    var ds=addDays(from,i),d=parse(ds),arr=by[ds]||[];
+    var cls="cell"+(wk?" wk":"")+(!wk&&d.getMonth()!==m?" other":"")+(ds===t?" today":"")+(ds===cal.sel?" sel":"");
+    h+='<div class="'+cls+'" data-d="'+ds+'"><div class="dn">'+d.getDate()+'</div>'+arr.map(chip).join("")+'<div class="more" style="display:none"></div></div>';
+  }
+  $("calGrid").innerHTML=h;
+  fitCells();
+  $("dayTitle").textContent=fmtD(cal.sel,true);
+  var day=itemsBetween(cal.sel,cal.sel);
+  $("dayList").innerHTML=day.length?day.map(function(it){return itemHtml(it,false);}).join(""):'<div class="empty">Nothing on this day.</div>';
+  var up=itemsBetween(t,addDays(t,13)).filter(function(it){return it.kind==="ev"?it.ev.status!=="Cancelled":!it.task.done;});
+  $("upList").innerHTML=up.length?up.map(function(it){return itemHtml(it,true);}).join(""):'<div class="empty">Nothing in the next 14 days.</div>';
+}
+function fitCells(){
+  $("calGrid").querySelectorAll(".cell").forEach(function(c){
+    var chips=Array.from(c.querySelectorAll(".chip")),more=c.querySelector(".more"),hidden=0;
+    if(c.scrollHeight<=c.clientHeight+1)return;
+    more.style.display="";
+    while(chips.length&&c.scrollHeight>c.clientHeight+1){chips.pop().style.display="none";hidden++;more.textContent="+"+hidden+" more";}
+  });
+}
+var rzT;window.addEventListener("resize",function(){clearTimeout(rzT);rzT=setTimeout(function(){if(cur==="calendar")renderCalendar();},150);});
+$("calGrid").addEventListener("click",function(e){var c=e.target.closest(".cell");if(!c)return;cal.sel=c.getAttribute("data-d");var d=parse(cal.sel);if(UI.view!=="week"&&d.getMonth()!==cal.m.getMonth())cal.m=new Date(d.getFullYear(),d.getMonth(),1);var mo=c.querySelector(".more");if(!UI.panel&&mo&&mo.textContent){UI.panel=true;saveUI();}renderCalendar();});
+$("calGrid").addEventListener("dblclick",function(e){var c=e.target.closest(".cell");if(!c)return;cal.sel=c.getAttribute("data-d");$("calAddEv").onclick();});
+function calMove(n){
+  if(UI.view==="week"){cal.sel=addDays(cal.sel,7*n);var d=parse(cal.sel);cal.m=new Date(d.getFullYear(),d.getMonth(),1);}
+  else{cal.m=new Date(cal.m.getFullYear(),cal.m.getMonth()+n,1);}
+  renderCalendar();
+}
+$("calPrev").onclick=function(){calMove(-1);};
+$("calNext").onclick=function(){calMove(1);};
+$("calToday").onclick=function(){cal.sel=today();cal.m=null;renderCalendar();};
+$("calMonth").onclick=function(){UI.view="month";saveUI();var d=parse(cal.sel);cal.m=new Date(d.getFullYear(),d.getMonth(),1);renderCalendar();};
+$("calWeek").onclick=function(){UI.view="week";saveUI();renderCalendar();};
+$("calPanel").onclick=function(){UI.panel=!UI.panel;saveUI();renderCalendar();};
+$("calAddEv").onclick=function(){show("reminders");evClear();$("evDate").value=cal.sel;$("evTitle").focus();};
+$("dayAddEv").onclick=$("calAddEv").onclick;
+$("dayAddTask").onclick=function(){show("todo");$("tdDue").value=cal.sel;$("tdNew").focus();};
+document.addEventListener("change",function(e){
+  var id=e.target.getAttribute&&e.target.getAttribute("data-tdone");if(!id)return;
+  var t=D.tasks.filter(function(x){return x.id===id;})[0];if(!t)return;
+  t.done=e.target.checked;t.doneAt=t.done?Date.now():null;save();renderMenu();
+  if(cur==="calendar")renderCalendar();else if(cur==="todo")renderTodo();
+});
+document.addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest("[data-evedit]");if(!b)return;
+  show("reminders");evEdit(b.getAttribute("data-evedit"));
+});
+/* ============ REMINDERS / EVENTS ============ */
+var evSel=new Set(),evEditId=null,evPk=null;
+function fillEvSelects(){
+  $("evType").innerHTML=optList(D.settings.eventTypes,$("evType").value||D.settings.eventTypes[0]);
+  var r=$("evRemind").value;$("evRemind").innerHTML=remindOpts(r||D.settings.defRemind);
+}
+function evClear(){
+  evEditId=null;evSel.clear();
+  ["evTitle","evDate","evTime","evEnd","evLoc","evUntil","evNotes","evExtra"].forEach(function(i){$(i).value="";});
+  $("evAllDay").checked=false;$("evRepeat").value="none";$("evStatus").value="Scheduled";
+  $("evEmailMe").checked=false;$("evEmailOthers").checked=false;$("evPickWrap").style.display="none";
+  fillEvSelects();$("evType").value=D.settings.eventTypes[0];$("evRemind").value=D.settings.defRemind;
+  $("evFormTitle").textContent="Add an Event or Appointment";$("evCancel").style.display="none";$("evSave").textContent="Save";
+  if(evPk)evPk.draw();
+}
+function evEdit(id){
+  var ev=D.events.filter(function(x){return x.id===id;})[0];if(!ev)return;
+  evClear();evEditId=id;
+  $("evTitle").value=ev.title||"";
+  if(D.settings.eventTypes.indexOf(ev.type)<0&&ev.type)$("evType").innerHTML+='<option>'+esc(ev.type)+'</option>';
+  $("evType").value=ev.type||D.settings.eventTypes[0];
+  $("evDate").value=ev.date||"";$("evTime").value=ev.time||"";$("evEnd").value=ev.endTime||"";$("evAllDay").checked=!!ev.allDay;
+  $("evLoc").value=ev.location||"";$("evRepeat").value=ev.repeat||"none";$("evUntil").value=ev.until||"";$("evNotes").value=ev.notes||"";
+  $("evRemind").value=String(ev.remind==null?"-1":ev.remind);$("evStatus").value=ev.status||"Scheduled";
+  $("evEmailMe").checked=!!ev.emailMe;$("evEmailOthers").checked=!!ev.emailOthers;$("evPickWrap").style.display=ev.emailOthers?"":"none";
+  (ev.people||[]).forEach(function(p){evSel.add(p);});$("evExtra").value=ev.extra||"";
+  if(evPk)evPk.draw();
+  $("evFormTitle").textContent="Edit: "+ev.title;$("evCancel").style.display="";$("evSave").textContent="Save changes";
+  $("evTitle").focus();
+}
+function evFromForm(){
+  return {title:$("evTitle").value.trim(),type:$("evType").value,date:$("evDate").value,time:$("evAllDay").checked?"":$("evTime").value,
+    endTime:$("evAllDay").checked?"":$("evEnd").value,allDay:$("evAllDay").checked,location:$("evLoc").value.trim(),repeat:$("evRepeat").value,
+    until:$("evRepeat").value==="none"?"":$("evUntil").value,notes:$("evNotes").value.trim(),remind:$("evRemind").value,status:$("evStatus").value,
+    emailMe:$("evEmailMe").checked,emailOthers:$("evEmailOthers").checked,people:Array.from(evSel),extra:$("evExtra").value.trim()};
+}
+$("evEmailOthers").onchange=function(){$("evPickWrap").style.display=this.checked?"":"none";};
+$("evAllDay").onchange=function(){$("evTime").disabled=$("evEnd").disabled=this.checked;};
+$("evSave").onclick=function(){
+  var f=evFromForm();
+  if(!f.title){toast("Type a title.","bad");$("evTitle").focus();return;}
+  if(!f.date){toast("Pick a date.","bad");$("evDate").focus();return;}
+  if(f.until&&f.until<f.date){toast("“Repeat until” is before the start date.","bad");return;}
+  if(f.emailMe&&!validEmail(D.settings.myEmail)){toast("Add your email in Settings so reminders can be emailed to you.","bad");}
+  if(f.emailOthers){var r=recipients(f.people,f.extra);if(r.bad.length){toast("Not a valid email: "+r.bad.join(", "),"bad");return;}if(!r.list.length){toast("Pick at least one person or type an address to email the reminder to.","bad");return;}}
+  if(evEditId){var ev=D.events.filter(function(x){return x.id===evEditId;})[0];Object.assign(ev,f);clearNotified(ev.id);toast("Saved changes.","good");}
+  else{f.id=uid();f.created=Date.now();D.events.push(f);toast("Saved: "+f.title,"good");}
+  save();evClear();renderEvList();
+};
+$("evCancel").onclick=evClear;
+$("evEmailNow").onclick=function(){
+  var f=evFromForm();if(!f.title||!f.date){toast("Fill in at least a title and date first.","bad");return;}
+  composeFrom({subject:f.title+" — "+fmtD(f.date),body:eventText(f),people:f.people,extra:f.extra});
+};
+function eventWhen(ev,date){
+  date=date||ev.date;
+  var s=fmtD(date,true);
+  if(ev.allDay||!ev.time)s+=" (all day)";else s+=", "+fmtT(ev.time)+(ev.endTime?" to "+fmtT(ev.endTime):"");
+  return s;
+}
+function eventText(ev,date){
+  var l=[ev.title,"When: "+eventWhen(ev,date)];
+  if(ev.location)l.push("Where: "+ev.location);
+  if(ev.notes)l.push("Notes: "+ev.notes);
+  return l.join("\n");
+}
+function clearNotified(id){Object.keys(D.notified).forEach(function(k){if(k.indexOf(id+"|")===0)delete D.notified[k];});}
+function renderEvList(){
+  var q=$("evSearch").value.trim().toLowerCase(),f=$("evFilter").value,t=today();
+  var arr=D.events.map(function(ev){
+    var n=nextOcc(ev);var last=occ(ev,"1900-01-01",t).pop()||ev.date;
+    return {ev:ev,show:f==="past"?last:(n||ev.date),up:!!n};
+  }).filter(function(x){
+    if(q&&(x.ev.title+" "+(x.ev.type||"")+" "+(x.ev.location||"")+" "+(x.ev.notes||"")).toLowerCase().indexOf(q)<0)return false;
+    if(f==="up")return x.up;if(f==="past")return !x.up||x.ev.date<t;return true;
+  });
+  arr.sort(function(a,b){return f==="past"?b.show.localeCompare(a.show):a.show.localeCompare(b.show);});
+  if(!arr.length){$("evList").innerHTML='<div class="empty">No events.</div>';return;}
+  $("evList").innerHTML='<div class="tw"><table class="t"><thead><tr><th>Date</th><th>Event</th><th>Remind</th><th></th></tr></thead><tbody>'+arr.map(function(x){
+    var ev=x.ev,st=ev.status==="Completed"?' <span class="pill green">Completed</span>':ev.status==="Cancelled"?' <span class="pill red">Cancelled</span>':"";
+    var rep=ev.repeat&&ev.repeat!=="none"?' <span class="pill">'+({daily:"Daily",weekly:"Weekly",monthly:"Monthly",yearly:"Yearly"})[ev.repeat]+'</span>':"";
+    return '<tr><td style="white-space:nowrap">'+esc(fmtD(x.show))+'<div class="note">'+(ev.allDay||!ev.time?"All day":fmtT(ev.time))+'</div></td><td><span class="dot" style="background:'+colorFor(ev.type)+'"></span><b>'+esc(ev.title)+'</b>'+st+rep+'<div class="note">'+esc(ev.type||"")+(ev.location?" · "+esc(ev.location):"")+'</div></td><td class="note">'+esc(remindLabel(ev.remind))+(ev.emailMe?"<br>✉ me":"")+(ev.emailOthers?"<br>✉ others":"")+'</td><td style="white-space:nowrap"><button class="ghost sm" data-evedit="'+ev.id+'">Edit</button> <button class="ghost sm" data-evmail="'+ev.id+'">Email</button> <button class="danger sm" data-evdel="'+ev.id+'">Delete</button></td></tr>';
+  }).join("")+'</tbody></table></div>';
+}
+$("evList").addEventListener("click",function(e){
+  var m=e.target.closest("[data-evmail]"),d=e.target.closest("[data-evdel]");
+  if(m){var ev=D.events.filter(function(x){return x.id===m.getAttribute("data-evmail");})[0];if(ev)composeFrom({subject:ev.title+" — "+fmtD(nextOcc(ev)||ev.date),body:eventText(ev,nextOcc(ev)||ev.date),people:ev.people,extra:ev.extra});}
+  if(d){var id=d.getAttribute("data-evdel"),ev2=D.events.filter(function(x){return x.id===id;})[0];if(!ev2||!confirm("Delete “"+ev2.title+"”?"))return;
+    D.events=D.events.filter(function(x){return x.id!==id;});clearNotified(id);if(evEditId===id)evClear();save();renderEvList();toast("Deleted.");}
+});
+$("evSearch").oninput=renderEvList;$("evFilter").onchange=renderEvList;
+function bulkRowHtml(){
+  return '<tr><td><input type="text" data-k="title" style="min-width:130px"></td><td><select data-k="type">'+optList(D.settings.eventTypes,D.settings.eventTypes[0])+'</select></td><td><input type="date" data-k="date"></td><td><input type="time" data-k="time"></td><td><input type="text" data-k="location" style="min-width:100px"></td><td><select data-k="remind">'+remindOpts(D.settings.defRemind)+'</select></td><td><button class="ghost sm" data-rm="1" title="Remove row">&times;</button></td></tr>';
+}
+function bulkReset(n){$("bulkTbl").tBodies[0].innerHTML=new Array(n||3).fill(0).map(bulkRowHtml).join("");}
+$("bulkRow").onclick=function(){$("bulkTbl").tBodies[0].insertAdjacentHTML("beforeend",bulkRowHtml());};
+$("bulkTbl").addEventListener("click",function(e){var b=e.target.closest("[data-rm]");if(b)b.closest("tr").remove();});
+$("bulkSave").onclick=function(){
+  var rows=Array.from($("bulkTbl").tBodies[0].rows),added=0,miss=0;
+  rows.forEach(function(r){
+    var g=function(k){return r.querySelector('[data-k="'+k+'"]').value.trim();};
+    if(!g("title")&&!g("date"))return;
+    if(!g("title")||!g("date")){miss++;return;}
+    D.events.push({id:uid(),created:Date.now(),title:g("title"),type:g("type"),date:g("date"),time:g("time"),endTime:"",allDay:!g("time"),location:g("location"),repeat:"none",until:"",notes:"",remind:g("remind"),status:"Scheduled",emailMe:false,emailOthers:false,people:[],extra:""});
+    added++;
+  });
+  if(miss){toast(miss+" row(s) need both a title and a date.","bad");}
+  if(added){save();bulkReset(3);renderEvList();toast(added+" event(s) saved.","good");}
+  else if(!miss)toast("Fill in at least one row.","bad");
+};
+function renderReminders(){
+  fillEvSelects();
+  if(!evPk)evPk=picker($("evPicker"),evSel);else evPk.draw();
+  if(!$("bulkTbl").tBodies[0].rows.length)bulkReset(3);
+  renderEvList();
+}
+/* ============ DO LIST ============ */
+var tdEditId=null;
+function renderTodo(){
+  $("tdCat").innerHTML=optList(D.settings.taskCats,$("tdCat").value||D.settings.taskCats[0]);
+  $("tdFCat").innerHTML=optList(D.settings.taskCats,$("tdFCat").value,"All categories");
+  if(!$("tdRemind").options.length)$("tdRemind").innerHTML=remindOpts("-1");
+  var q=$("tdSearch").value.trim().toLowerCase(),fs=$("tdFStatus").value,fc=$("tdFCat").value,so=$("tdSort").value,t=today();
+  var arr=D.tasks.filter(function(x){
+    if(fs==="open"&&x.done)return false;if(fs==="done"&&!x.done)return false;
+    if(fc&&x.cat!==fc)return false;
+    if(q&&(x.text+" "+(x.cat||"")+" "+(x.notes||"")).toLowerCase().indexOf(q)<0)return false;return true;
+  });
+  var pr={High:0,Normal:1,Low:2};
+  arr.sort(function(a,b){
+    if(so==="new")return (b.created||0)-(a.created||0);
+    if(so==="pri"){var p=pr[a.pri||"Normal"]-pr[b.pri||"Normal"];if(p)return p;}
+    return ((a.due||"9999")+(a.time||"")).localeCompare((b.due||"9999")+(b.time||""));
+  });
+  if(!arr.length){$("tdBody").innerHTML='<tr><td colspan="8"><div class="empty">'+(D.tasks.length?"No tasks match.":"No tasks yet. Type some above, one per line.")+'</div></td></tr>';return;}
+  $("tdBody").innerHTML=arr.map(function(x){
+    if(x.id===tdEditId){
+      return '<tr data-row="'+x.id+'"><td></td><td><input type="text" data-e="text" value="'+esc(x.text)+'"><textarea data-e="notes" style="min-height:40px;margin-top:4px" placeholder="Notes">'+esc(x.notes||"")+'</textarea></td><td><select data-e="cat">'+optList(D.settings.taskCats.indexOf(x.cat)<0&&x.cat?D.settings.taskCats.concat([x.cat]):D.settings.taskCats,x.cat)+'</select></td><td><select data-e="pri">'+optList(["Normal","High","Low"],x.pri||"Normal")+'</select></td><td><input type="date" data-e="due" value="'+esc(x.due||"")+'"></td><td><input type="time" data-e="time" value="'+esc(x.time||"")+'"></td><td><select data-e="remind">'+remindOpts(x.remind==null?"-1":x.remind)+'</select></td><td style="white-space:nowrap"><button class="primary sm" data-tsave="'+x.id+'">Save</button> <button class="ghost sm" data-tcancel="1">Cancel</button></td></tr>';
+    }
+    var od=!x.done&&x.due&&(x.due<t||(x.due===t&&x.time&&dtOf(x.due,x.time)<new Date()));
+    var pp=x.pri==="High"?'<span class="pill red">High</span>':x.pri==="Low"?'<span class="pill">Low</span>':'<span class="pill amber">Normal</span>';
+    return '<tr class="'+(x.done?"task-done":"")+'"><td><input type="checkbox" style="width:auto" data-tdone="'+x.id+'"'+(x.done?" checked":"")+'></td><td><span class="ttl">'+esc(x.text)+'</span>'+(x.notes?'<div class="note">'+esc(x.notes)+'</div>':"")+'</td><td>'+esc(x.cat||"")+'</td><td>'+pp+'</td><td class="'+(od?"over":"")+'" style="white-space:nowrap">'+(x.due?esc(fmtD(x.due)):"—")+(od?"<br>Overdue":"")+'</td><td>'+(x.time?fmtT(x.time):"")+'</td><td class="note">'+(x.remind!=null&&x.remind!=="-1"&&x.due?esc(remindLabel(x.remind)):"")+'</td><td style="white-space:nowrap"><button class="ghost sm" data-tedit="'+x.id+'">Edit</button> <button class="ghost sm" data-mailtask="'+x.id+'" title="Email this task">&#9993;</button> <button class="danger sm" data-tdel="'+x.id+'">Delete</button></td></tr>';
+  }).join("");
+}
+$("tdAdd").onclick=function(){
+  var lines=$("tdNew").value.split(/\r?\n/).map(function(s){return s.replace(/^\s*([-*•]|\d+[.)]|\[\s?\])\s*/,"").trim();}).filter(Boolean);
+  if(!lines.length){toast("Type at least one task.","bad");$("tdNew").focus();return;}
+  var rem=$("tdRemind").value;
+  if(rem!=="-1"&&!$("tdDue").value){toast("A reminder needs a due date.","bad");return;}
+  lines.forEach(function(s){D.tasks.push({id:uid(),created:Date.now(),text:s,cat:$("tdCat").value,pri:$("tdPri").value,due:$("tdDue").value,time:$("tdTime").value,remind:rem,done:false,notes:""});});
+  save();$("tdNew").value="";renderTodo();renderMenu();toast(lines.length+" task(s) added.","good");
+};
+$("tdBody").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  if(b.hasAttribute("data-tedit")){tdEditId=b.getAttribute("data-tedit");renderTodo();return;}
+  if(b.hasAttribute("data-tcancel")){tdEditId=null;renderTodo();return;}
+  if(b.hasAttribute("data-tsave")){
+    var id=b.getAttribute("data-tsave"),x=D.tasks.filter(function(t){return t.id===id;})[0],tr=b.closest("tr");
+    var g=function(k){return tr.querySelector('[data-e="'+k+'"]').value;};
+    if(!g("text").trim()){toast("The task cannot be empty.","bad");return;}
+    Object.assign(x,{text:g("text").trim(),notes:g("notes").trim(),cat:g("cat"),pri:g("pri"),due:g("due"),time:g("time"),remind:g("remind")});
+    clearNotified(x.id);tdEditId=null;save();renderTodo();renderMenu();return;
+  }
+  if(b.hasAttribute("data-tdel")){var id2=b.getAttribute("data-tdel");D.tasks=D.tasks.filter(function(t){return t.id!==id2;});clearNotified(id2);save();renderTodo();renderMenu();}
+});
+["tdSearch"].forEach(function(i){$(i).oninput=renderTodo;});
+["tdFStatus","tdFCat","tdSort"].forEach(function(i){$(i).onchange=renderTodo;});
+$("tdClearDone").onclick=function(){var n=D.tasks.filter(function(t){return t.done;}).length;if(!n){toast("No done tasks.");return;}if(!confirm("Delete "+n+" done task(s)?"))return;D.tasks=D.tasks.filter(function(t){return !t.done;});save();renderTodo();toast(n+" deleted.");};
+/* ============ CONTACTS ============ */
+var ctEditId=null,ctSel=new Set();
+function ctClear(){
+  ctEditId=null;["ctName","ctEmail","ctPhone","ctAddr","ctBday","ctNotes"].forEach(function(i){$(i).value="";});
+  $("ctTitle").value="";$("ctGroup").innerHTML=optList(D.settings.groups,D.settings.groups[0]);
+  $("ctFormTitle").textContent="Add a Contact";$("ctCancel").style.display="none";$("ctSave").textContent="Save contact";
+}
+function renderContacts(){
+  if(!ctEditId)$("ctGroup").innerHTML=optList(D.settings.groups,$("ctGroup").value||D.settings.groups[0]);
+  $("ctFGroup").innerHTML=optList(D.settings.groups,$("ctFGroup").value,"All groups");
+  var q=$("ctSearch").value.trim().toLowerCase(),g=$("ctFGroup").value;
+  var arr=D.contacts.filter(function(c){return (!g||c.group===g)&&(!q||(c.name+" "+(c.email||"")+" "+(c.phone||"")+" "+(c.notes||"")).toLowerCase().indexOf(q)>=0);})
+    .sort(function(a,b){return a.name.localeCompare(b.name);});
+  $("ctCount").textContent=D.contacts.length+" contact(s) · "+ctSel.size+" selected";
+  if(!arr.length){$("ctList").innerHTML='<div class="empty">'+(D.contacts.length?"No contacts match.":"No contacts yet.")+'</div>';return;}
+  $("ctList").innerHTML=arr.map(function(c){
+    return '<div class="it"><input type="checkbox" style="width:auto;margin-top:4px" data-csel="'+c.id+'"'+(ctSel.has(c.id)?" checked":"")+(c.email?"":" disabled title=\"No email saved\"")+'><div class="bd"><div class="tt">'+esc((c.title?c.title+" ":"")+c.name)+(c.group?' <span class="pill">'+esc(c.group)+'</span>':"")+'</div><div class="note">'+(c.email?esc(c.email):"<i>no email</i>")+(c.phone?" · "+esc(c.phone):"")+(c.bday?" · Birthday "+esc(parse(c.bday).toLocaleDateString(undefined,{month:"long",day:"numeric"})):"")+'</div>'+(c.addr?'<div class="note" style="white-space:pre-line">'+esc(c.addr)+'</div>':"")+'<div class="mact"><button class="ghost sm" data-cedit="'+c.id+'">Edit</button>'+(c.email?'<button class="ghost sm" data-cmail="'+c.id+'">Email</button>':"")+'<button class="ghost sm" data-cshare="'+c.id+'">&#9993; Send details</button><button class="danger sm" data-cdel="'+c.id+'">Delete</button></div></div></div>';
+  }).join("");
+}
+$("ctSave").onclick=function(){
+  var c={title:$("ctTitle").value,name:$("ctName").value.trim(),email:$("ctEmail").value.trim(),phone:$("ctPhone").value.trim(),group:$("ctGroup").value,addr:$("ctAddr").value.trim(),bday:$("ctBday").value,notes:$("ctNotes").value.trim()};
+  if(!c.name){toast("Type a name.","bad");$("ctName").focus();return;}
+  if(c.email&&!validEmail(c.email)){toast("That email address does not look right.","bad");$("ctEmail").focus();return;}
+  if(c.email){var dup=D.contacts.filter(function(x){return x.id!==ctEditId&&(x.email||"").toLowerCase()===c.email.toLowerCase();})[0];if(dup&&!confirm(dup.name+" already has this email. Save anyway?"))return;}
+  if(ctEditId){Object.assign(D.contacts.filter(function(x){return x.id===ctEditId;})[0],c);toast("Contact updated.","good");}
+  else{c.id=uid();c.created=Date.now();D.contacts.push(c);toast("Saved: "+c.name,"good");}
+  save();ctClear();renderContacts();
+};
+$("ctCancel").onclick=ctClear;
+$("ctList").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  var id=b.getAttribute("data-cedit")||b.getAttribute("data-cmail")||b.getAttribute("data-cdel")||b.getAttribute("data-cshare"),c=D.contacts.filter(function(x){return x.id===id;})[0];if(!c)return;
+  if(b.hasAttribute("data-cedit")){
+    ctEditId=id;$("ctTitle").value=c.title||"";$("ctName").value=c.name;$("ctEmail").value=c.email||"";$("ctPhone").value=c.phone||"";
+    $("ctGroup").innerHTML=optList(D.settings.groups.indexOf(c.group)<0&&c.group?D.settings.groups.concat([c.group]):D.settings.groups,c.group);
+    $("ctAddr").value=c.addr||"";$("ctBday").value=c.bday||"";$("ctNotes").value=c.notes||"";
+    $("ctFormTitle").textContent="Edit: "+c.name;$("ctCancel").style.display="";$("ctSave").textContent="Save changes";$("ctName").focus();window.scrollTo(0,0);
+  }else if(b.hasAttribute("data-cmail")){composeFrom({people:[id]});}
+  else if(b.hasAttribute("data-cshare")){composeFrom({subject:"Contact details: "+c.name,body:contactText(c)});}
+  else if(b.hasAttribute("data-cdel")){if(!confirm("Delete "+c.name+"?"))return;D.contacts=D.contacts.filter(function(x){return x.id!==id;});ctSel.delete(id);if(ctEditId===id)ctClear();save();renderContacts();}
+});
+$("ctList").addEventListener("change",function(e){var id=e.target.getAttribute("data-csel");if(!id)return;if(e.target.checked)ctSel.add(id);else ctSel.delete(id);$("ctCount").textContent=D.contacts.length+" contact(s) · "+ctSel.size+" selected";});
+$("ctSearch").oninput=renderContacts;$("ctFGroup").onchange=renderContacts;
+$("ctEmailSel").onclick=function(){if(!ctSel.size){toast("Tick the contacts you want to email.","bad");return;}composeFrom({people:Array.from(ctSel)});};
+function csvRows(text){
+  var rows=[],row=[],f="",q=false;
+  for(var i=0;i<text.length;i++){var ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=ch;}
+    else if(ch==='"')q=true;else if(ch===","){row.push(f);f="";}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&text[i+1]==="\n")i++;row.push(f);rows.push(row);row=[];f="";}
+    else f+=ch;}
+  if(f||row.length){row.push(f);rows.push(row);}
+  return rows.filter(function(r){return r.some(function(x){return x.trim();});});
+}
+function vcfParse(text){
+  var out=[];text=text.replace(/\r?\n[ \t]/g,"");
+  text.split(/BEGIN:VCARD/i).slice(1).forEach(function(card){
+    var c={name:"",email:"",phone:"",addr:"",bday:"",notes:""};
+    card.split(/\r?\n/).forEach(function(line){
+      var i=line.indexOf(":");if(i<0)return;var k=line.slice(0,i).toUpperCase(),v=line.slice(i+1).replace(/\\n/g,"\n").replace(/\\,/g,",").replace(/\;/g,";").trim();
+      var base=k.split(";")[0].replace(/^ITEM\d+\./,"");
+      if(base==="FN")c.name=v;
+      else if(base==="N"&&!c.name){var p=v.split(";");c.name=[p[1],p[2],p[0]].filter(Boolean).join(" ").trim();}
+      else if(base==="EMAIL"&&!c.email)c.email=v;
+      else if(base==="TEL"&&!c.phone)c.phone=v;
+      else if(base==="ADR"&&!c.addr){var a=v.split(";");c.addr=[a[2],[a[3],a[4]].filter(Boolean).join(", ")+(a[5]?" "+a[5]:"")].filter(function(x){return x&&x.trim();}).join("\n");}
+      else if(base==="BDAY"){var m=v.replace(/-/g,"").match(/^(\d{4})(\d{2})(\d{2})/);if(m)c.bday=m[1]+"-"+m[2]+"-"+m[3];}
+      else if(base==="NOTE")c.notes=v;
+    });
+    if(c.name||c.email)out.push(c);
+  });
+  return out;
+}
+function csvContacts(text){
+  var rows=csvRows(text);if(rows.length<2)return [];
+  var h=rows[0].map(function(x){return x.trim().toLowerCase();});
+  function col(re){for(var i=0;i<h.length;i++)if(re.test(h[i]))return i;return -1;}
+  var iN=col(/^(name|full name|display name)$/),iF=col(/^first/),iL=col(/^last/),iE=col(/e-?mail/),iP=col(/phone|mobile|tel/),iA=col(/address/),iB=col(/birth/),iG=col(/group|label|categor/),iNo=col(/note/);
+  return rows.slice(1).map(function(r){
+    var g=function(i){return i>=0?(r[i]||"").trim():"";};
+    var name=g(iN)||[g(iF),g(iL)].filter(Boolean).join(" ");
+    var b=g(iB),bd="";if(b){var d=new Date(b);if(!isNaN(d))bd=iso(d);}
+    return {name:name||g(iE),email:(g(iE).split(/[\s;:]+/).filter(validEmail)[0]||""),phone:g(iP),addr:g(iA),bday:bd,notes:g(iNo),groupRaw:g(iG)};
+  }).filter(function(c){return c.name||c.email;});
+}
+$("ctImport").onchange=function(){
+  var files=Array.from(this.files||[]);this.value="";if(!files.length)return;
+  var added=0,skipped=0,n=files.length;
+  files.forEach(function(f){
+    var rd=new FileReader();
+    rd.onload=function(){
+      var txt=String(rd.result),list=/\.vcf$/i.test(f.name)||/BEGIN:VCARD/i.test(txt)?vcfParse(txt):csvContacts(txt);
+      list.forEach(function(c){
+        if(c.email&&D.contacts.some(function(x){return (x.email||"").toLowerCase()===c.email.toLowerCase();})){skipped++;return;}
+        var grp=D.settings.groups.filter(function(g){return c.groupRaw&&c.groupRaw.toLowerCase().indexOf(g.toLowerCase())>=0;})[0]||"Other";
+        if(D.settings.groups.indexOf(grp)<0)grp=D.settings.groups[D.settings.groups.length-1];
+        D.contacts.push({id:uid(),created:Date.now(),title:"",name:c.name||c.email,email:c.email,phone:c.phone,group:grp,addr:c.addr,bday:c.bday,notes:c.notes});added++;
+      });
+      if(--n===0){save();renderContacts();toast(added+" contact(s) imported"+(skipped?", "+skipped+" already saved (skipped)":"")+". Titles are left blank — set them yourself if needed.","good",7000);}
+    };
+    rd.readAsText(f);
+  });
+};
+/* ============ EMAILJS ============ */
+function ejReady(){var e=D.settings.ej;return e.service&&e.template&&e.key;}
+function textToHtml(t){return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#1c2733">'+esc(t).replace(/\r?\n/g,"<br>")+'</div>';}
+function sendEmail(o){
+  var e=D.settings.ej;
+  if(!ejReady())return Promise.reject(new Error("EmailJS is not set up. Open Settings → Email (EmailJS)."));
+  var isHtml=!!o.html;
+  var p={to_email:o.to,email:o.to,to:o.to,to_name:o.toName||"",subject:o.subject||"",message:o.text||"",
+    message_html:isHtml?o.html:textToHtml(o.text||""),html_display:isHtml?"block":"none",text_display:isHtml?"none":"block",
+    from_name:D.settings.myName||"",reply_to:D.settings.myEmail||"",lock_display:"none",unlock_display:"none"};
+  return fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({service_id:e.service,template_id:e.template,user_id:e.key,template_params:p})})
+  .then(function(r){return r.text().then(function(t){if(!r.ok)throw new Error("EmailJS "+r.status+": "+(t||r.statusText));return t;});});
+}
+function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
+/* ============ AI ============ */
+var RULES=[
+"You work only for the owner of this personal planner. Follow these rules every time:",
+"- Write only what the owner asks for. Do not add filler, pleasantries, extra sentences, made-up facts, or pre-written phrases he did not ask for.",
+"- Never use love, affectionate or sentimental wording: no \"with love\", \"love you\", \"thinking of you\", \"hugs\", \"xoxo\", \"warmly\", \"sending love\", hearts or similar.",
+"- No emojis unless the owner asks for them.",
+"- Formal titles: use a person's title only when it is given to you (from the saved contact). Never infer marital status from a name, from children, or from anything else. If a woman's title is not given, use Ms. only when a title is clearly required; otherwise use her name. Men are Mr.",
+"- Mailing address block format: Name / P.O. Box 1234 / Pago Pago, AS 96799 (each on its own line).",
+"- Never use or cite CNN as a source.",
+"- If information needed is missing, leave a clear [bracketed blank] instead of inventing it."
+].join("\n");
+function getKey(){
+  var k="";try{k=localStorage.getItem(APIKEY)||"";}catch(e){}
+  if(!k){k=findKey();if(k)try{localStorage.setItem(APIKEY,k);}catch(e){}}
+  return k;
+}
+function findKey(){
+  try{for(var i=0;i<localStorage.length;i++){var n=localStorage.key(i);if(n===KEY)continue;var v=localStorage.getItem(n)||"";
+    if(/^sk-ant-[\w-]{20,}$/.test(v.trim()))return v.trim();
+    var m=v.match(/"(sk-ant-[\w-]{20,})"/);if(m)return m[1];}}catch(e){}
+  return "";
+}
+function aiOnce(messages,system,maxTokens){
+  var k=getKey();if(!k)return Promise.reject(new Error("No Anthropic API key. Add it in Settings → AI."));
+  var h={"content-type":"application/json","x-api-key":k,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
+  if(D.settings.workspace)h["anthropic-workspace-id"]=D.settings.workspace;
+  return fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:h,body:JSON.stringify({model:MODEL,max_tokens:maxTokens||4000,system:system,messages:messages})})
+  .then(function(r){return r.json().catch(function(){return {};}).then(function(j){
+    if(!r.ok)throw new Error((j.error&&j.error.message)||("AI error "+r.status));
+    return {text:(j.content||[]).filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join(""),stop:j.stop_reason};
+  });});
+}
+function ai(content,system,maxTokens,history){
+  var base=(history||[]).concat([{role:"user",content:content}]),out="",round=0;
+  system=RULES+(system?"\n\n"+system:"");
+  function go(){
+    var msgs=round?base.concat([{role:"assistant",content:out.replace(/\s+$/,"")},{role:"user",content:"Continue exactly where you stopped. Do not repeat anything and do not add any introduction."}]):base;
+    return aiOnce(msgs,system,maxTokens).then(function(r){
+      out=round?out.replace(/\s+$/,"")+r.text:r.text;
+      if(r.stop==="max_tokens"&&++round<5)return go();
+      return out;
+    });
+  }
+  return go();
+}
+function parseJSON(t){
+  t=String(t||"").replace(/^\s*```(?:json)?/i,"").replace(/```\s*$/,"").trim();
+  try{return JSON.parse(t);}catch(e){}
+  var a=t.search(/[\[{]/),b=Math.max(t.lastIndexOf("}"),t.lastIndexOf("]"));
+  if(a>=0&&b>a){try{return JSON.parse(t.slice(a,b+1));}catch(e){}}
+  return null;
+}
+function sanitizeHtml(h){
+  h=String(h||"").replace(/^\s*```(?:html)?/i,"").replace(/```\s*$/,"").trim();
+  h=h.replace(/<script[\s\S]*?<\/script>/gi,"").replace(/<script[^>]*>/gi,"")
+     .replace(/<(iframe|object|embed|form)[\s\S]*?<\/\1>/gi,"").replace(/<(iframe|object|embed)[^>]*>/gi,"")
+     .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,"")
+     .replace(/(href|src)\s*=\s*(["'])\s*javascript:[^"']*\2/gi,'$1="#"');
+  return h;
+}
+/* ============ FILES → AI BLOCKS ============ */
+var scripts={};
+function loadScript(url,glob){
+  if(window[glob])return Promise.resolve(window[glob]);
+  if(!scripts[url])scripts[url]=new Promise(function(ok,no){var s=document.createElement("script");s.src=url;s.onload=function(){ok(window[glob]);};s.onerror=function(){delete scripts[url];no(new Error("Could not load a reader for this file type. Check your internet connection."));};document.head.appendChild(s);});
+  return scripts[url];
+}
+var JSZIP_URL="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",XLSX_URL="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+function readAs(f,how){return new Promise(function(ok,no){var r=new FileReader();r.onload=function(){ok(r.result);};r.onerror=function(){no(r.error||new Error("Could not read "+f.name));};r["readAs"+how](f);});}
+function b64(f){return readAs(f,"DataURL").then(function(u){return String(u).split(",")[1]||"";});}
+function ext(n){var m=/\.([a-z0-9]+)$/i.exec(n||"");return m?m[1].toLowerCase():"";}
+var TEXT_EXT="txt csv tsv json xml md markdown log ini cfg conf yaml yml js mjs ts tsx jsx py java c cpp h hpp cs go rb php swift kt rs css scss sql sh bat ps1 eml ics vcf srt vtt tex svg toml env properties gpx kml".split(" ");
+var IMG_OK=["image/png","image/jpeg","image/gif","image/webp"];
+var CAP=200000;
+function cap(t){t=String(t||"");return t.length>CAP?t.slice(0,CAP)+"\n[… cut off: file too long, first "+CAP+" characters shown]":t;}
+function decodeXml(s){return s.replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,function(m,n){return String.fromCharCode(+n);}).replace(/&#x([0-9a-f]+);/gi,function(m,n){return String.fromCharCode(parseInt(n,16));}).replace(/&amp;/g,"&");}
+function xmlText(x){
+  return decodeXml(x.replace(/<w:tab\/>|<text:tab\/>/g,"\t").replace(/<w:br\/>|<text:line-break\/>|<a:br\/>/g,"\n")
+    .replace(/<\/(w:p|a:p|text:p|text:h|p|div|li|tr|h\d)>/gi,"\n").replace(/<\/(w:tc|td|th|table:table-cell)>/gi,"\t")
+    .replace(/<[^>]+>/g,"")).replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim();
+}
+function htmlText(h){
+  try{var d=new DOMParser().parseFromString(h,"text/html");d.querySelectorAll("script,style,noscript").forEach(function(n){n.remove();});
+    d.querySelectorAll("br").forEach(function(b){b.replaceWith("\n");});d.querySelectorAll("p,div,li,tr,h1,h2,h3,h4,h5,h6,section,article").forEach(function(n){n.append("\n");});
+    d.querySelectorAll("td,th").forEach(function(n){n.append("\t");});
+    return (d.body?d.body.textContent:"").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim();}catch(e){return h;}
+}
+function rtfText(r){
+  return r.replace(/\\par[d]?/g,"\n").replace(/\\tab/g,"\t").replace(/\\'([0-9a-f]{2})/gi,function(m,h){return String.fromCharCode(parseInt(h,16));})
+    .replace(/\\u(-?\d+)\??/g,function(m,n){n=+n;if(n<0)n+=65536;return String.fromCharCode(n);})
+    .replace(/\{\\\*[^{}]*\}/g,"").replace(/\\[a-z]+-?\d* ?/gi,"").replace(/[{}]/g,"").replace(/\n{3,}/g,"\n\n").trim();
+}
+function strings(buf){
+  var u=new Uint8Array(buf),out=[],cur="";
+  for(var i=0;i<u.length;i++){var c=u[i];if(c>=32&&c<127||c===9){cur+=String.fromCharCode(c);}else{if(cur.length>=5)out.push(cur);cur="";}}
+  if(cur.length>=5)out.push(cur);
+  var w="",wo=[];for(var j=0;j+1<u.length;j+=2){var cc=u[j]|(u[j+1]<<8);if(cc>=32&&cc<0xD800){w+=String.fromCharCode(cc);}else{if(w.length>=5)wo.push(w);w="";}}
+  if(w.length>=5)wo.push(w);
+  return out.join("\n")+(wo.length?"\n--- (wide text) ---\n"+wo.join("\n"):"");
+}
+function looksText(buf){var u=new Uint8Array(buf.slice(0,4000)),bad=0;for(var i=0;i<u.length;i++){var c=u[i];if(c===0)return false;if(c<9||(c>13&&c<32))bad++;}return bad<u.length*0.02;}
+function toImage(blob,maxSide){
+  return new Promise(function(ok,no){
+    var url=URL.createObjectURL(blob),img=new Image();
+    img.onload=function(){
+      var w=img.naturalWidth,h=img.naturalHeight,s=Math.min(1,(maxSide||2000)/Math.max(w,h));
+      var c=document.createElement("canvas");c.width=Math.round(w*s);c.height=Math.round(h*s);
+      var g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
+      var d=c.toDataURL("image/jpeg",0.88);ok({media:"image/jpeg",data:d.split(",")[1]});
+    };
+    img.onerror=function(){URL.revokeObjectURL(url);no(new Error("This picture format cannot be opened by the browser"));};
+    img.src=url;
+  });
+}
+function imgBlock(m,d){return {type:"image",source:{type:"base64",media_type:m,data:d}};}
+function txtBlock(name,kind,t){return {type:"text",text:"=== File: "+name+(kind?" ("+kind+")":"")+" ===\n"+cap(t)};}
+function zipText(f,kind){
+  return loadScript(JSZIP_URL,"JSZip").then(function(JSZip){return readAs(f,"ArrayBuffer").then(function(buf){return JSZip.loadAsync(buf);});}).then(function(z){
+    var names=Object.keys(z.files).filter(function(n){return !z.files[n].dir;}),pick=[],blocks=[];
+    function num(n){var m=n.match(/(\d+)\.xml$/);return m?+m[1]:0;}
+    if(kind==="docx")pick=names.filter(function(n){return /^word\/(document|footnotes|endnotes|header\d*|footer\d*|comments)\.xml$/.test(n);}).sort(function(a,b){return a.indexOf("document")>=0?-1:b.indexOf("document")>=0?1:a.localeCompare(b);});
+    else if(kind==="pptx")pick=names.filter(function(n){return /^ppt\/(slides\/slide|notesSlides\/notesSlide)\d+\.xml$/.test(n);}).sort(function(a,b){return (a.indexOf("notes")>=0)-(b.indexOf("notes")>=0)||num(a)-num(b);});
+    else if(kind==="odf")pick=names.filter(function(n){return n==="content.xml";});
+    else if(kind==="epub")pick=names.filter(function(n){return /\.(x?html?)$/i.test(n);}).sort();
+    if(kind!=="zip"){
+      return Promise.all(pick.map(function(n){return z.files[n].async("string").then(function(x){
+        var label=kind==="pptx"?(n.indexOf("notes")>=0?"[Speaker notes "+num(n)+"]\n":"[Slide "+num(n)+"]\n"):"";
+        return label+(kind==="epub"?htmlText(x):xmlText(x));});})).then(function(parts){return [txtBlock(f.name,kind.toUpperCase(),parts.join("\n\n"))];});
+    }
+    var list="Files inside the zip:\n"+names.join("\n"),texts=[],imgs=0,chain=Promise.resolve();
+    names.slice(0,200).forEach(function(n){
+      var e=ext(n);
+      if(TEXT_EXT.indexOf(e)>=0||e==="html"||e==="htm")chain=chain.then(function(){return z.files[n].async("string").then(function(x){texts.push("--- "+n+" ---\n"+(e==="html"||e==="htm"?htmlText(x):x));});});
+      else if(["docx","xml"].indexOf(e)<0&&["png","jpg","jpeg","gif","webp"].indexOf(e)>=0&&imgs<6){imgs++;chain=chain.then(function(){return z.files[n].async("blob").then(function(b){return toImage(b,1600).then(function(im){blocks.push({type:"text",text:"Picture inside zip: "+n});blocks.push(imgBlock(im.media,im.data));}).catch(function(){});});});}
+      else if(e==="docx"||e==="pptx"||e==="pdf"||e==="xlsx")texts.push("--- "+n+" --- (an Office/PDF file inside the zip; unzip it and add it directly to read it)");
+    });
+    return chain.then(function(){return [txtBlock(f.name,"ZIP",list+"\n\n"+texts.join("\n\n"))].concat(blocks);});
+  });
+}
+function fileBlocks(f){
+  var e=ext(f.name),t=(f.type||"").toLowerCase();
+  if(t==="application/pdf"||e==="pdf"){
+    if(f.size>30*1048576)return Promise.resolve([txtBlock(f.name,"PDF","[This PDF is over 30 MB, too large to send to the AI. Split it into smaller files.]")]);
+    return b64(f).then(function(d){return [{type:"text",text:"=== File: "+f.name+" (PDF) ==="},{type:"document",source:{type:"base64",media_type:"application/pdf",data:d}}];});
+  }
+  if(t.indexOf("image/")===0||["png","jpg","jpeg","gif","webp","bmp","svg","heic","heif","tif","tiff","avif","ico"].indexOf(e)>=0){
+    if(e==="svg")return readAs(f,"Text").then(function(x){return [txtBlock(f.name,"SVG",x)];});
+    if(IMG_OK.indexOf(t)>=0&&f.size<3.5*1048576)return b64(f).then(function(d){return [{type:"text",text:"=== Picture: "+f.name+" ==="},imgBlock(t,d)];});
+    return toImage(f,2000).then(function(im){return [{type:"text",text:"=== Picture: "+f.name+" ==="},imgBlock(im.media,im.data)];})
+      .catch(function(){return [txtBlock(f.name,"picture","[This picture format ("+(e||t)+") cannot be opened by this browser. Save it as JPG or PNG and add it again.]")];});
+  }
+  if(["xlsx","xlsm","xls","ods","xlsb","numbers"].indexOf(e)>=0){
+    return loadScript(XLSX_URL,"XLSX").then(function(X){return readAs(f,"ArrayBuffer").then(function(buf){
+      var wb=X.read(buf,{type:"array",cellDates:true});
+      return [txtBlock(f.name,"spreadsheet",wb.SheetNames.map(function(n){return "--- Sheet: "+n+" ---\n"+X.utils.sheet_to_csv(wb.Sheets[n],{blankrows:false});}).join("\n\n"))];
+    });});
+  }
+  if(["docx","docm","dotx"].indexOf(e)>=0)return zipText(f,"docx");
+  if(["pptx","ppsx","potx"].indexOf(e)>=0)return zipText(f,"pptx");
+  if(["odt","odp","odg"].indexOf(e)>=0)return zipText(f,"odf");
+  if(e==="epub")return zipText(f,"epub");
+  if(e==="zip")return zipText(f,"zip");
+  if(e==="html"||e==="htm"||t==="text/html")return readAs(f,"Text").then(function(x){return [txtBlock(f.name,"web page",htmlText(x))];});
+  if(e==="rtf")return readAs(f,"Text").then(function(x){return [txtBlock(f.name,"RTF",rtfText(x))];});
+  if(t.indexOf("audio/")===0||t.indexOf("video/")===0||["mp3","m4a","wav","aac","ogg","flac","mp4","mov","avi","mkv","webm","wmv"].indexOf(e)>=0)
+    return Promise.resolve([txtBlock(f.name,"audio/video","[Audio or video file, "+Math.round(f.size/1024)+" KB. The AI cannot listen to or watch it. Add a transcript or screenshots instead.]")]);
+  if(TEXT_EXT.indexOf(e)>=0||t.indexOf("text/")===0||/json|xml|javascript|csv/.test(t))return readAs(f,"Text").then(function(x){return [txtBlock(f.name,e.toUpperCase(),x)];});
+  return readAs(f,"ArrayBuffer").then(function(buf){
+    if(looksText(buf))return [txtBlock(f.name,e.toUpperCase(),new TextDecoder("utf-8").decode(buf))];
+    return [txtBlock(f.name,(e||"binary")+" — readable text pulled from the file","[This file type is not a standard document, so only the readable words inside it were pulled out.]\n"+strings(buf))];
+  });
+}
+function filesToBlocks(files){
+  return Promise.all(files.map(function(f){return fileBlocks(f).catch(function(err){return [txtBlock(f.name,"","[Could not read this file: "+err.message+"]")];});}))
+    .then(function(arr){return [].concat.apply([],arr);});
+}
+function fileChips(host,arr,redraw){
+  host.innerHTML=arr.map(function(f,i){return '<span class="fchip">&#128196; '+esc(f.name)+' <span class="note">'+(f.size>1048576?(f.size/1048576).toFixed(1)+" MB":Math.max(1,Math.round(f.size/1024))+" KB")+'</span><b data-i="'+i+'" title="Remove">&times;</b></span>';}).join("");
+  host.onclick=function(e){var i=e.target.getAttribute("data-i");if(i==null)return;arr.splice(+i,1);redraw();};
+}
+/* ============ EMAIL FROM ANYWHERE ============ */
+function taskText(t){
+  return "- "+t.text+(t.due?" — due "+fmtD(t.due)+(t.time?", "+fmtT(t.time):""):"")+(t.pri==="High"?" (high priority)":"")+(t.done?" (done)":"")+(t.notes?"\n  "+t.notes.replace(/\n/g,"\n  "):"");
+}
+function itemText(it){
+  if(it.kind==="task")return taskText(it.task);
+  var e=it.ev;return "- "+(it.time?fmtT(it.time)+(e.endTime&&!e.allDay?" to "+fmtT(e.endTime):""):"All day")+": "+e.title+(e.location?" — "+e.location:"")+(e.status!=="Scheduled"?" ("+e.status+")":"");
+}
+function dayText(ds){var a=itemsBetween(ds,ds);return fmtD(ds,true)+"\n"+(a.length?a.map(itemText).join("\n"):"(nothing scheduled)");}
+function rangeText(from,to){
+  var a=itemsBetween(from,to).filter(function(it){return it.kind==="ev"?it.ev.status!=="Cancelled":!it.task.done;}),by={},order=[];
+  a.forEach(function(it){if(!by[it.date]){by[it.date]=[];order.push(it.date);}by[it.date].push(it);});
+  return order.length?order.map(function(d){return fmtD(d,true)+"\n"+by[d].map(itemText).join("\n");}).join("\n\n"):"(nothing scheduled)";
+}
+function contactText(c){
+  var l=[(c.title?c.title+" ":"")+c.name];
+  if(c.addr)l=l.concat(c.addr.split(/\r?\n/));
+  if(c.phone)l.push("Phone: "+c.phone);
+  if(c.email)l.push("Email: "+c.email);
+  return l.join("\n");
+}
+document.addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest("[data-mailev],[data-mailtask]");if(!b)return;
+  if(b.hasAttribute("data-mailev")){
+    var ev=allEvents().filter(function(x){return x.id===b.getAttribute("data-mailev");})[0];if(!ev)return;
+    var d=b.getAttribute("data-d")||nextOcc(ev)||ev.date;
+    composeFrom({subject:ev.title+" — "+fmtD(d),body:eventText(ev,d),people:ev.people||[],extra:ev.extra||""});
+  }else{
+    var t=D.tasks.filter(function(x){return x.id===b.getAttribute("data-mailtask");})[0];if(!t)return;
+    composeFrom({subject:t.text,body:taskText(t).replace(/^- /,"")});
+  }
+});
+$("dayEmail").onclick=function(){composeFrom({subject:"Schedule for "+fmtD(cal.sel),body:dayText(cal.sel)});};
+$("upEmail").onclick=function(){var t=today(),e=addDays(t,13);composeFrom({subject:"Schedule: "+fmtD(t)+" to "+fmtD(e),body:rangeText(t,e)});};
+$("tdEmail").onclick=function(){
+  var ids=Array.from($("tdBody").querySelectorAll("[data-tdone]")).map(function(c){return c.getAttribute("data-tdone");});
+  var list=ids.map(function(id){return D.tasks.filter(function(t){return t.id===id;})[0];}).filter(Boolean);
+  if(!list.length){toast("No tasks shown to email.","bad");return;}
+  var cat=$("tdFCat").value;
+  composeFrom({subject:"Do List"+(cat?" — "+cat:"")+" ("+fmtD(today())+")",body:list.map(taskText).join("\n")});
+};
+/* ============ EMAIL ============ */
+var emSel=new Set(),emPk=null,awFiles=[],design={html:"",src:""},sending=false;
+function fullBody(){var b=$("emBody").value;if($("emSig").checked&&D.settings.signature.trim())b=b.replace(/\s+$/,"")+"\n\n"+D.settings.signature.trim();return b;}
+function srcKey(){return $("emSubject").value+"\u0001"+fullBody();}
+function composeFrom(o){fillEmail(o);show("email");if(!o.subject&&!o.body)$("emSubject").focus();}
+function fillEmail(o){
+  emSel.clear();(o.people||[]).forEach(function(p){emSel.add(p);});
+  $("emExtra").value=o.extra||"";
+  if(o.subject!=null)$("emSubject").value=o.subject;
+  if(o.body!=null)$("emBody").value=o.body;
+  if(o.subject!=null||o.body!=null)dropDesign();
+  if(emPk)emPk.draw();
+}
+function setPreview(h){$("adPrev").srcdoc=h||'<div style="font-family:Arial;color:#5A6B7C;padding:30px;text-align:center">The designed email shows here.</div>';}
+function dropDesign(){design={html:"",src:""};$("adHtml").value="";$("adHtml").style.display="none";setPreview("");$("emFormat").value="text";$("adMsg").textContent="";}
+function renderEmail(){
+  if(!emPk)emPk=picker($("emPicker"),emSel);else emPk.draw();
+  if(!design.html)setPreview("");
+  renderSent();
+}
+function personal(s,r){
+  var last=(r.name||"").trim().split(/\s+/).pop()||"";
+  return String(s).replace(/\{name\}/gi,r.name||"").replace(/\{first\}/gi,(r.name||"").trim().split(/\s+/)[0]||"").replace(/\{formal\}/gi,r.title&&last?r.title+" "+last:(r.name||""));
+}
+$("emSend").onclick=function(){
+  if(sending)return;
+  var r=recipients(emSel,$("emExtra").value);
+  if(r.bad.length){toast("Not a valid email: "+r.bad.join(", "),"bad");return;}
+  if(!r.list.length){toast("Pick a contact or type an email address.","bad");return;}
+  var subj=$("emSubject").value.trim(),body=fullBody();
+  if(!subj){toast("Type a subject.","bad");$("emSubject").focus();return;}
+  if(!body.trim()&&!design.html){toast("The message is empty.","bad");$("emBody").focus();return;}
+  if(!ejReady()){toast("EmailJS is not set up yet. Go to Settings → Email (EmailJS).","bad",7000);return;}
+  var useHtml=$("emFormat").value==="html",html="";
+  if(useHtml){
+    if(design.html){
+      if(design.src!==srcKey()&&!confirm("You changed the subject or message after the design was made. The design still has the old words.\n\nOK = send the design anyway\nCancel = stop so you can press “Design it” again"))return;
+      html=design.html;
+    }else html=textToHtml(body);
+  }
+  if(!confirm("Send “"+subj+"” to "+r.list.length+" "+(r.list.length===1?"person":"people")+"?\n\n"+r.list.map(function(x){return (x.name?x.name+" ":"")+"<"+x.email+">";}).slice(0,15).join("\n")+(r.list.length>15?"\n…":"")))return;
+  sending=true;$("emSend").disabled=true;
+  var log={id:uid(),at:Date.now(),subject:subj,body:body,html:useHtml?html:"",recips:[]},i=0;
+  (function next(){
+    if(i>=r.list.length){
+      sending=false;$("emSend").disabled=false;
+      var ok=log.recips.filter(function(x){return x.ok;}).length,bad=log.recips.length-ok;
+      D.sent.unshift(log);if(D.sent.length>300)D.sent.length=300;save();renderSent();
+      $("emMsg").textContent=ok+" sent"+(bad?", "+bad+" failed":"")+".";
+      toast(ok+" email(s) sent"+(bad?", "+bad+" failed — see Sent below.":"."),bad?"bad":"good",bad?9000:4500);
+      return;
+    }
+    var p=r.list[i];$("emMsg").textContent="Sending "+(i+1)+" of "+r.list.length+"…";
+    sendEmail({to:p.email,toName:p.name,subject:personal(subj,p),text:personal(body,p),html:html?personal(html,p):""})
+      .then(function(){log.recips.push({email:p.email,name:p.name,ok:true});})
+      .catch(function(err){log.recips.push({email:p.email,name:p.name,ok:false,err:err.message});})
+      .then(function(){i++;return i<r.list.length?wait(1100):null;}).then(next);
+  })();
+};
+$("emClear").onclick=function(){if(($("emSubject").value||$("emBody").value)&&!confirm("Clear the email?"))return;$("emSubject").value="";$("emBody").value="";$("emExtra").value="";emSel.clear();emPk.draw();dropDesign();$("emMsg").textContent="";};
+/* AI writer */
+$("awFiles").onchange=function(){Array.from(this.files||[]).forEach(function(f){awFiles.push(f);});this.value="";drawAw();};
+function drawAw(){fileChips($("awFileList"),awFiles,drawAw);}
+function recipNote(){
+  var r=recipients(emSel,$("emExtra").value).list;if(!r.length)return "Recipients: not chosen yet.";
+  return "Recipients ("+r.length+"):\n"+r.slice(0,25).map(function(x){return "- "+(x.name||"(no saved name)")+(x.title?" — saved title: "+x.title:" — no saved title")+" <"+x.email+">";}).join("\n")+
+    (r.length>1?"\nThis email goes to each person separately. If a greeting with the person's name is wanted, write {name} (full name), {first} (first name) or {formal} (saved title + last name) and it will be filled in for each person.":"");
+}
+$("awGo").onclick=function(){
+  var ask=$("awAsk").value.trim(),keep=$("awKeep").checked,cur=$("emBody").value.trim();
+  if(!ask&&!(keep&&cur)&&!awFiles.length){toast("Tell the AI what the email should say.","bad");$("awAsk").focus();return;}
+  var btn=this;btn.disabled=true;$("awMsg").textContent=awFiles.length?"Reading files…":"Writing…";
+  filesToBlocks(awFiles).then(function(blocks){
+    $("awMsg").textContent="Writing…";
+    var p=["Write a complete email for me to send.","Tone: "+$("awTone").value+". Length: "+$("awLen").value+".",
+      "My name: "+(D.settings.myName||"[not set]"),recipNote(),
+      "What I want it to say: "+(ask||"(see the files / current draft)"),
+      keep&&cur?"Rewrite this current draft (keep its facts):\nSUBJECT: "+$("emSubject").value+"\n"+cur:"",
+      awFiles.length?"Use the information in the attached files where it fits what I asked.":"",
+      "Do not add a signature block; I add my own. A plain closing with my name is fine only if it suits the tone and I did not say otherwise.",
+      "Reply with JSON only, no other text: {\"subject\":\"...\",\"body\":\"...\"}. The body is plain text with line breaks (\\n)."].filter(Boolean).join("\n\n");
+    return ai(blocks.concat([{type:"text",text:p}]),"You write emails for the owner exactly as he asks.",4000);
+  }).then(function(out){
+    var j=parseJSON(out);
+    if(!j||typeof j.body!=="string"){j={subject:$("emSubject").value,body:String(out).trim()};}
+    if(($("emBody").value.trim()&&!keep)&&!confirm("Replace what is in the message box with the AI's email?")){$("awMsg").textContent="Not used.";return;}
+    if(j.subject)$("emSubject").value=j.subject;$("emBody").value=j.body.trim();
+    if(design.html){$("adMsg").textContent="The message changed — press “Design it” again to update the design.";}
+    $("awMsg").textContent="Done. Check it, change anything you want, then send.";
+  }).catch(function(err){$("awMsg").textContent="";toast(err.message,"bad",8000);})
+  .then(function(){btn.disabled=false;});
+};
+/* AI HTML designer */
+$("adGo").onclick=function(){
+  var subj=$("emSubject").value.trim(),body=fullBody().trim();
+  if(!body){toast("Write the message first (or let the AI write it), then design it.","bad");return;}
+  var btn=this;btn.disabled=true;$("adMsg").textContent="Designing…";
+  var img=$("adImg").value.trim();
+  var p=["Design an HTML email from the subject and message below.",
+    "Rules for the design:",
+    "- Use ONLY the words in the subject and message, exactly as written, in the same order. Do not add, remove, reword or summarize any sentence. No added taglines, headings with new words, footers, unsubscribe text, or buttons with new text (a button may reuse a link that is in the message, with words from the message).",
+    "- Keep tokens like {name}, {first}, {formal} exactly as they are.",
+    "- Email-safe HTML: table layout, all CSS inline, max width 600px, centered, web-safe fonts, works in Gmail and Outlook. No JavaScript, no external CSS, no forms.",
+    "- Style: "+$("adStyle").value+". Main color: "+$("adColor").value+".",
+    img?"- Include this image near the top, width 100% max 600px, alt text from the subject: "+img:"- No images.",
+    $("adAsk").value.trim()?"- My design instructions: "+$("adAsk").value.trim():"",
+    "- No hearts or decorative emojis.",
+    "Return only the complete HTML document, starting with <!DOCTYPE html>.",
+    "SUBJECT: "+subj,"MESSAGE:\n"+body].filter(Boolean).join("\n");
+  var src=srcKey();
+  ai(p,"You are an email designer. You never change the owner's words.",8000).then(function(h){
+    h=sanitizeHtml(h);if(!/<(table|div|body|html)/i.test(h))throw new Error("The AI did not return HTML. Try again.");
+    design={html:h,src:src};$("adHtml").value=h;setPreview(h);$("emFormat").value="html";
+    $("adMsg").textContent="Done. “Send as” is now set to Designed HTML email.";
+  }).catch(function(err){$("adMsg").textContent="";toast(err.message,"bad",8000);}).then(function(){btn.disabled=false;});
+};
+$("adEdit").onclick=function(){var t=$("adHtml");if(!design.html){toast("Design an email first.");return;}t.style.display=t.style.display==="none"?"":"none";};
+$("adHtml").oninput=function(){design.html=sanitizeHtml(this.value);setPreview(design.html);};
+$("adDrop").onclick=dropDesign;
+$("emFormat").onchange=function(){if(this.value==="html"&&!design.html)$("adMsg").textContent="No design yet: the message will be sent as simple HTML text. Press “Design it” for a designed email.";};
+/* sent */
+function renderSent(){
+  var q=$("snSearch").value.trim().toLowerCase();
+  var arr=D.sent.filter(function(s){return !q||(s.subject+" "+s.body+" "+s.recips.map(function(r){return r.name+" "+r.email;}).join(" ")).toLowerCase().indexOf(q)>=0;});
+  if(!arr.length){$("snList").innerHTML='<div class="empty">'+(D.sent.length?"Nothing matches.":"No emails sent yet.")+'</div>';return;}
+  $("snList").innerHTML=arr.slice(0,100).map(function(s){
+    var ok=s.recips.filter(function(r){return r.ok;}).length,bad=s.recips.length-ok;
+    return '<details class="box"><summary>'+esc(s.subject)+' <span class="note">· '+new Date(s.at).toLocaleString()+' · '+ok+' sent'+(bad?' · <span class="over">'+bad+' failed</span>':"")+(s.html?" · HTML":"")+'</span></summary>'+
+      '<div class="note" style="margin:6px 0">'+s.recips.map(function(r){return esc((r.name?r.name+" ":"")+"<"+r.email+">")+(r.ok?"":' <span class="over">failed: '+esc(r.err||"")+'</span>');}).join("<br>")+'</div>'+
+      '<div style="white-space:pre-wrap;background:#F7F9FB;border-radius:6px;padding:8px;font-size:13.5px">'+esc(s.body)+'</div>'+
+      '<div class="mact"><button class="ghost sm" data-reuse="'+s.id+'">Use again</button>'+(bad?'<button class="ghost sm" data-retry="'+s.id+'">Put failed addresses in “To”</button>':"")+'<button class="danger sm" data-sdel="'+s.id+'">Delete</button></div></details>';
+  }).join("");
+}
+$("snSearch").oninput=renderSent;
+$("snList").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  var id=b.getAttribute("data-reuse")||b.getAttribute("data-retry")||b.getAttribute("data-sdel"),s=D.sent.filter(function(x){return x.id===id;})[0];if(!s)return;
+  if(b.hasAttribute("data-sdel")){D.sent=D.sent.filter(function(x){return x.id!==id;});save();renderSent();return;}
+  var extra=b.hasAttribute("data-retry")?s.recips.filter(function(r){return !r.ok;}).map(function(r){return r.email;}).join(", "):"";
+  $("emSig").checked=false;
+  composeFrom({subject:s.subject,body:s.body,extra:extra});
+  if(s.html){design={html:s.html,src:srcKey()};$("adHtml").value=s.html;setPreview(s.html);$("emFormat").value="html";}
+});
+/* ============ MY FILES (saved in this browser, IndexedDB) ============ */
+var FDB=null,LIB=[];
+function fdb(){
+  if(!FDB)FDB=new Promise(function(ok,no){
+    if(!window.indexedDB){no(new Error("This browser cannot store files."));return;}
+    var r=indexedDB.open("ppm_files",1);
+    r.onupgradeneeded=function(){r.result.createObjectStore("files",{keyPath:"id"});};
+    r.onsuccess=function(){ok(r.result);};r.onerror=function(){no(r.error||new Error("Could not open file storage."));};
+  });
+  return FDB;
+}
+function fx(mode,fn){return fdb().then(function(db){return new Promise(function(ok,no){var tx=db.transaction("files",mode),st=tx.objectStore("files"),req=fn(st);tx.oncomplete=function(){ok(req&&req.result);};tx.onerror=function(){no(tx.error||new Error("File storage error"));};tx.onabort=function(){no(tx.error||new Error("Not enough storage space for this file."));};});});}
+function libLoad(){
+  return fx("readonly",function(st){return st.getAll();}).then(function(all){
+    LIB=(all||[]).map(function(f){return {id:f.id,name:f.name,type:f.type,size:f.size,added:f.added};}).sort(function(a,b){return b.added-a.added;});
+    renderLib();return LIB;
+  }).catch(function(){LIB=[];renderLib();return LIB;});
+}
+function libSave(files){
+  var add=files.filter(function(f){return !LIB.some(function(x){return x.name===f.name&&x.size===f.size;});});
+  if(!add.length)return Promise.resolve(0);
+  return Promise.all(add.map(function(f){return fx("readwrite",function(st){return st.put({id:uid(),name:f.name,type:f.type||"",size:f.size,added:Date.now(),blob:f});});}))
+    .then(function(){return libLoad();}).then(function(){return add.length;})
+    .catch(function(e){toast("Could not save to My Files: "+e.message,"bad",7000);return 0;});
+}
+function libGet(id){return fx("readonly",function(st){return st.get(id);}).then(function(r){if(!r)throw new Error("File not found");return new File([r.blob],r.name,{type:r.type||(r.blob&&r.blob.type)||""});});}
+function libDel(id){return fx("readwrite",function(st){return st.delete(id);}).then(libLoad);}
+function libFind(q){
+  q=String(q||"").trim().toLowerCase();if(!q)return [];
+  var exact=LIB.filter(function(f){return f.id===q||f.name.toLowerCase()===q;});if(exact.length)return exact;
+  var words=q.split(/\s+/).filter(Boolean);
+  return LIB.filter(function(f){var n=f.name.toLowerCase();return words.every(function(w){return n.indexOf(w)>=0;});});
+}
+function fsize(n){return n>1048576?(n/1048576).toFixed(1)+" MB":Math.max(1,Math.round(n/1024))+" KB";}
+function renderLib(){
+  if(!$("libList"))return;
+  var q=($("libSearch").value||"").trim().toLowerCase();
+  var arr=LIB.filter(function(f){return !q||f.name.toLowerCase().indexOf(q)>=0;});
+  $("libList").innerHTML=arr.length?arr.map(function(f){
+    return '<div class="librow"><span>&#128196;</span><div class="nm"><b>'+esc(f.name)+'</b><div class="note">'+fsize(f.size)+' · '+new Date(f.added).toLocaleDateString()+'</div></div><button class="ghost sm" data-lask="'+f.id+'" title="Attach to the chat">Ask</button><button class="ghost sm" data-ldown="'+f.id+'" title="Download">&#8681;</button><button class="danger sm" data-ldel="'+f.id+'" title="Delete">&times;</button></div>';
+  }).join(""):'<div class="empty">'+(LIB.length?"No files match.":"No saved files yet.")+'</div>';
+  if(navigator.storage&&navigator.storage.estimate)navigator.storage.estimate().then(function(e){$("libUse").textContent=LIB.length+" file(s) · "+fsize(e.usage||0)+" used of about "+fsize(e.quota||0)+" available";}).catch(function(){});
+  var sel=$("exLib");if(sel)sel.innerHTML='<option value="">+ Add a file from My Files…</option>'+LIB.map(function(f){return '<option value="'+f.id+'">'+esc(f.name)+'</option>';}).join("");
+}
+$("libAdd").onchange=function(){var f=Array.from(this.files||[]);this.value="";libSave(f).then(function(n){if(n)toast(n+" file(s) saved to My Files.","good");else toast("Those files are already saved.");});};
+$("libSearch").oninput=renderLib;
+$("libList").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  var id=b.getAttribute("data-lask")||b.getAttribute("data-ldown")||b.getAttribute("data-ldel");
+  if(b.hasAttribute("data-ldel")){var f=LIB.filter(function(x){return x.id===id;})[0];if(f&&confirm("Delete “"+f.name+"” from My Files?"))libDel(id);return;}
+  libGet(id).then(function(file){
+    if(b.hasAttribute("data-lask")){chFiles.push(file);renderChatFiles();$("chIn").focus();}
+    else{var a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=file.name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);}
+  }).catch(function(err){toast(err.message,"bad");});
+});
+/* ============ AI ASSISTANT (agent with tools) ============ */
+var chFiles=[],chBusy=false,pending={};
+function md(t){
+  var parts=String(t||"").split(/```[a-z]*\n?/i),h="";
+  parts.forEach(function(p,i){
+    if(i%2){h+="<pre>"+esc(p.replace(/\n$/,""))+"</pre>";return;}
+    var lines=esc(p).split("\n"),inList=false,out=[];
+    lines.forEach(function(l){
+      var m;
+      if((m=l.match(/^\s*([-*•]|\d+[.)])\s+(.*)/))){if(!inList){out.push("<ul>");inList=true;}out.push("<li>"+m[2]+"</li>");return;}
+      if(inList){out.push("</ul>");inList=false;}
+      if((m=l.match(/^#{1,2}\s+(.*)/)))out.push("<h3>"+m[1]+"</h3>");
+      else if((m=l.match(/^#{3,6}\s+(.*)/)))out.push("<h4>"+m[1]+"</h4>");
+      else if(/^\|.*\|\s*$/.test(l)){if(!/^\|[\s:|-]+\|$/.test(l))out.push('<div style="font-family:monospace;white-space:pre">'+l+'</div>');}
+      else out.push(l+"<br>");
+    });
+    if(inList)out.push("</ul>");
+    h+=out.join("");
+  });
+  return h.replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<i>$2</i>").replace(/`([^`]+)`/g,"<code>$1</code>").replace(/(<br>){3,}/g,"<br><br>");
+}
+function noteHtml(m){
+  var live=!!pending[m.id],h="";
+  if(m.kind==="email"){
+    var e=m.email;
+    h='<b>&#9993; Email ready to send</b><div class="note" style="margin:4px 0">To ('+e.list.length+'): '+e.list.map(function(r){return esc((r.name?r.name+" ":"")+"<"+r.email+">");}).join(", ")+'</div><div><b>Subject:</b> '+esc(e.subject)+'</div>'+
+      (e.html?'<iframe sandbox="" srcdoc="'+esc(e.html)+'"></iframe>':'<pre>'+esc(e.body)+'</pre>');
+    if(m.state==="pending")h+=live?'<div class="mact"><button class="primary sm" data-nsend="'+m.id+'">Send now</button><button class="ghost sm" data-nedit="'+m.id+'">Open in Email tab instead</button><button class="ghost sm" data-ncancel="'+m.id+'">Cancel</button></div>':'<div class="note">Not sent.</div>';
+    else h+='<div class="note" style="margin-top:4px"><b>'+esc(m.result||m.state)+'</b></div>';
+  }else if(m.kind==="delete"){
+    h='<b>&#128465; Delete '+m.items.length+' item(s)?</b><div class="note">'+m.items.map(function(x){return esc(x);}).join("<br>")+'</div>';
+    if(m.state==="pending")h+=live?'<div class="mact"><button class="danger sm" data-nsend="'+m.id+'">Delete</button><button class="ghost sm" data-ncancel="'+m.id+'">Cancel</button></div>':'<div class="note">Not deleted.</div>';
+    else h+='<div class="note"><b>'+esc(m.result||m.state)+'</b></div>';
+  }else{
+    h=md(m.text)+(m.undo&&!m.undone?'<div class="mact"><button class="ghost sm" data-nundo="'+m.id+'">Undo</button></div>':"")+(m.undone?'<div class="note">Undone.</div>':"");
+  }
+  return '<div class="msg note'+(m.kind==="done"||m.state==="done"?" ok":"")+'"><div class="bub">'+h+'</div></div>';
+}
+function renderChat(){
+  var L=$("chList");
+  if(!D.chat.length){L.innerHTML='<div class="empty">Ask or tell it anything. For example:<br>“Add dentist Tuesday 10am and lunch with the team Friday noon”<br>“Email my Do List to Sione”<br>“What do I have next week? Send it to family@example.com”<br>“Pull up the lease file and list the due dates”</div>';}
+  else L.innerHTML=D.chat.map(function(m,i){
+    if(m.role==="note")return noteHtml(m);
+    var me=m.role==="user";
+    return '<div class="msg '+(me?"me":"ai")+(m.err?" err":"")+'"><div class="bub">'+(me?esc(m.text):md(m.text))+'</div>'+
+      (m.files&&m.files.length?'<div class="files">'+m.files.map(function(n){return '<span class="fchip">&#128196; '+esc(n)+'</span>';}).join("")+'</div>':"")+
+      '<div class="mt">'+new Date(m.at).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+'</div>'+
+      (!me&&!m.err?'<div class="mact"><button class="ghost sm" data-ccopy="'+i+'">Copy</button><button class="ghost sm" data-cmail="'+i+'">&#9993; Email this</button></div>':"")+'</div>';
+  }).join("");
+  if(chBusy)L.insertAdjacentHTML("beforeend",'<div class="msg ai"><div class="bub"><i class="muted">'+esc(chBusy===true?"Working…":chBusy)+'</i></div></div>');
+  L.scrollTop=L.scrollHeight;
+  renderChatFiles();renderLib();
+}
+function renderChatFiles(){fileChips($("chFileList"),chFiles,renderChatFiles);}
+function busy(t){chBusy=t;if(cur==="assistant")renderChat();}
+function addNote(n){n.role="note";n.id=n.id||uid();n.at=Date.now();D.chat.push(n);save();if(cur==="assistant")renderChat();return n;}
+function noteById(id){return D.chat.filter(function(m){return m.id===id;})[0];}
+/* ---- recipients by name, group or address ---- */
+function resolveTo(to,groups){
+  var list=[],seen={},problems=[];
+  function add(r){var k=r.email.toLowerCase();if(seen[k])return;seen[k]=1;list.push(r);}
+  (to||[]).forEach(function(x){
+    x=String(x||"").trim();if(!x)return;
+    var em=(x.match(/[^\s<>,;]+@[^\s<>,;]+\.[^\s<>,;]+/)||[])[0];
+    if(em){var c=D.contacts.filter(function(k){return (k.email||"").toLowerCase()===em.toLowerCase();})[0];add({email:em,name:c?c.name:"",title:c?(c.title||""):""});return;}
+    var q=x.toLowerCase().replace(/^(mr|mrs|ms|miss|dr|rev)\.?\s+/,"");
+    var m=D.contacts.filter(function(c){return c.name.toLowerCase()===q;});
+    if(!m.length)m=D.contacts.filter(function(c){return c.name.toLowerCase().split(/\s+/).indexOf(q)>=0;});
+    if(!m.length)m=D.contacts.filter(function(c){return c.name.toLowerCase().indexOf(q)>=0;});
+    if(!m.length){problems.push("No saved contact named “"+x+"”.");return;}
+    if(m.length>1){problems.push("“"+x+"” matches several contacts: "+m.map(function(c){return c.name;}).join(", ")+".");return;}
+    if(!validEmail(m[0].email)){problems.push(m[0].name+" has no email address saved.");return;}
+    add({email:m[0].email.trim(),name:m[0].name,title:m[0].title||""});
+  });
+  (groups||[]).forEach(function(g){
+    var gl=String(g).toLowerCase(),m=D.contacts.filter(function(c){return (c.group||"").toLowerCase()===gl&&validEmail(c.email);});
+    if(!m.length)problems.push("No contacts with an email in the group “"+g+"”.");
+    m.forEach(function(c){add({email:c.email.trim(),name:c.name,title:c.title||""});});
+  });
+  return {list:list,problems:problems};
+}
+function sendBatch(list,subj,body,html){
+  var log={id:uid(),at:Date.now(),subject:subj,body:body,html:html||"",recips:[]},i=0;
+  return new Promise(function(done){
+    (function next(){
+      if(i>=list.length){D.sent.unshift(log);if(D.sent.length>300)D.sent.length=300;save();done(log);return;}
+      var p=list[i];busy("Sending email "+(i+1)+" of "+list.length+"…");
+      sendEmail({to:p.email,toName:p.name,subject:personal(subj,p),text:personal(body,p),html:html?personal(html,p):""})
+        .then(function(){log.recips.push({email:p.email,name:p.name,ok:true});})
+        .catch(function(err){log.recips.push({email:p.email,name:p.name,ok:false,err:err.message});})
+        .then(function(){i++;return i<list.length?wait(1100):null;}).then(next);
+    })();
+  });
+}
+/* ---- tools ---- */
+var S_STR={type:"string"},S_BOOL={type:"boolean"},S_NUM={type:"number"};
+var TOOLS=[
+ {name:"search_planner",description:"Look up the owner's saved data: calendar events/appointments, Do List tasks, contacts, sent emails, or files in My Files. Use before changing or emailing existing items (to get their ids and details). With from/to dates, events are listed per occurrence in that range.",
+  input_schema:{type:"object",properties:{kind:{type:"string",enum:["events","tasks","contacts","sent","files","all"]},query:{type:"string",description:"words to match; empty = everything"},from:{type:"string",description:"YYYY-MM-DD"},to:{type:"string",description:"YYYY-MM-DD"},include_done:{type:"boolean",description:"tasks: include completed"}},required:["kind"]}},
+ {name:"add_events",description:"Add one or more calendar events/appointments.",
+  input_schema:{type:"object",properties:{events:{type:"array",items:{type:"object",properties:{title:S_STR,date:{type:"string",description:"YYYY-MM-DD"},time:{type:"string",description:"HH:MM 24h, empty for all day"},end_time:S_STR,type:S_STR,location:S_STR,notes:S_STR,repeat:{type:"string",enum:["none","daily","weekly","monthly","yearly"]},until:S_STR,remind_minutes:{type:"number",description:"minutes before; -1 none"},remind_email_me:S_BOOL,remind_email_to:{type:"array",items:S_STR,description:"contact names or email addresses to email the reminder to"}},required:["title","date"]}}},required:["events"]}},
+ {name:"update_event",description:"Change an existing event by id (only the fields given). status can be Scheduled, Completed or Cancelled.",
+  input_schema:{type:"object",properties:{id:S_STR,title:S_STR,date:S_STR,time:S_STR,end_time:S_STR,type:S_STR,location:S_STR,notes:S_STR,repeat:S_STR,until:S_STR,remind_minutes:S_NUM,status:S_STR},required:["id"]}},
+ {name:"add_tasks",description:"Add one or more Do List tasks.",
+  input_schema:{type:"object",properties:{tasks:{type:"array",items:{type:"object",properties:{text:S_STR,category:S_STR,priority:{type:"string",enum:["High","Normal","Low"]},due:S_STR,time:S_STR,notes:S_STR,remind_minutes:S_NUM},required:["text"]}}},required:["tasks"]}},
+ {name:"update_task",description:"Change a Do List task by id: mark done/not done or change fields.",
+  input_schema:{type:"object",properties:{id:S_STR,done:S_BOOL,text:S_STR,category:S_STR,priority:S_STR,due:S_STR,time:S_STR,notes:S_STR},required:["id"]}},
+ {name:"add_contacts",description:"Save one or more contacts. Set title ONLY if the owner stated it; never guess it.",
+  input_schema:{type:"object",properties:{contacts:{type:"array",items:{type:"object",properties:{title:{type:"string",enum:["","Mr.","Mrs.","Miss","Ms.","Dr.","Rev."]},name:S_STR,email:S_STR,phone:S_STR,group:S_STR,address:S_STR,birthday:S_STR,notes:S_STR},required:["name"]}}},required:["contacts"]}},
+ {name:"update_contact",description:"Change a contact by id (only the fields given).",
+  input_schema:{type:"object",properties:{id:S_STR,title:S_STR,name:S_STR,email:S_STR,phone:S_STR,group:S_STR,address:S_STR,birthday:S_STR,notes:S_STR},required:["id"]}},
+ {name:"delete_items",description:"Delete events, tasks, contacts or saved files by id. The owner must press Delete to confirm.",
+  input_schema:{type:"object",properties:{kind:{type:"string",enum:["events","tasks","contacts","files"]},ids:{type:"array",items:S_STR}},required:["kind","ids"]}},
+ {name:"send_email",description:"Send an email to anyone: saved contacts by name, whole contact groups, or any email address. The owner sees a preview card and presses Send — just call this; do not ask first in text. Each person gets their own copy. {name}, {first} and {formal} in subject/body are filled per person.",
+  input_schema:{type:"object",properties:{to:{type:"array",items:S_STR,description:"contact names and/or email addresses"},groups:{type:"array",items:S_STR,description:"contact group names, e.g. Family"},subject:S_STR,body:{type:"string",description:"plain text message"},html:{type:"string",description:"optional full designed HTML email (inline CSS, table layout) using only the body's words"},add_signature:S_BOOL},required:["subject","body"]}},
+ {name:"draft_email",description:"Put an email into the Email tab for the owner to edit and send himself (use when he asks for a draft rather than sending).",
+  input_schema:{type:"object",properties:{to:{type:"array",items:S_STR},groups:{type:"array",items:S_STR},subject:S_STR,body:S_STR},required:["body"]}},
+ {name:"read_file",description:"Open and read a file saved in My Files, by name (or part of the name) or id. Returns its full content.",
+  input_schema:{type:"object",properties:{name:S_STR},required:["name"]}},
+ {name:"open_screen",description:"Switch the app to a screen for the owner (calendar, reminders, todo, contacts, email, extract, settings). date (YYYY-MM-DD) selects a day on the calendar.",
+  input_schema:{type:"object",properties:{screen:{type:"string",enum:["calendar","reminders","todo","contacts","email","extract","settings"]},date:S_STR},required:["screen"]}}
+];
+function isDate(x){return /^\d{4}-\d{2}-\d{2}$/.test(x||"")&&!!parse(x);}
+function isTime(x){return /^\d{2}:\d{2}$/.test(x||"");}
+function remindVal(n,def){if(n==null||n==="")return def;n=+n;if(isNaN(n)||n<0)return "-1";var best=REMINDS[1][0];REMINDS.slice(1).forEach(function(r){if(Math.abs(+r[0]-n)<Math.abs(+best-n))best=r[0];});return best;}
+function pickFrom(list,v,def){if(!v)return def;var m=list.filter(function(x){return x.toLowerCase()===String(v).toLowerCase();})[0];return m||def;}
+function peopleFrom(arr){
+  var ids=[],extra=[];
+  (arr||[]).forEach(function(x){
+    var em=(String(x).match(/[^\s<>,;]+@[^\s<>,;]+\.[^\s<>,;]+/)||[])[0];
+    if(em){var c=D.contacts.filter(function(k){return (k.email||"").toLowerCase()===em.toLowerCase();})[0];if(c)ids.push(c.id);else extra.push(em);return;}
+    var q=String(x).toLowerCase(),m=D.contacts.filter(function(c){return c.name.toLowerCase()===q;});if(!m.length)m=D.contacts.filter(function(c){return c.name.toLowerCase().indexOf(q)>=0;});
+    if(m.length===1)ids.push(m[0].id);
+  });
+  return {ids:ids,extra:extra.join(", ")};
+}
+function evOut(ev,d){return {id:ev.id,title:ev.title,date:d||ev.date,time:ev.allDay?"":ev.time||"",end_time:ev.endTime||"",type:ev.type,location:ev.location||"",notes:ev.notes||"",repeat:ev.repeat||"none",status:ev.status||"Scheduled",remind:remindLabel(ev.remind),birthday_from_contact:!!ev.fromContact};}
+function taskOut(t){return {id:t.id,text:t.text,done:!!t.done,category:t.cat,priority:t.pri,due:t.due||"",time:t.time||"",notes:t.notes||""};}
+function ctOut(c){return {id:c.id,title:c.title||"",name:c.name,email:c.email||"",phone:c.phone||"",group:c.group||"",address:c.addr||"",birthday:c.bday||"",notes:c.notes||""};}
+function match(q,s){q=String(q||"").toLowerCase().trim();if(!q)return true;s=String(s).toLowerCase();return q.split(/\s+/).every(function(w){return s.indexOf(w)>=0;});}
+var TOOL={
+ search_planner:function(a){
+  var k=a.kind||"all",q=a.query||"",out={};
+  if(k==="events"||k==="all"){
+    if(isDate(a.from)||isDate(a.to)){var f=isDate(a.from)?a.from:today(),t=isDate(a.to)?a.to:addDays(f,30);
+      out.events=itemsBetween(f,t).filter(function(it){return it.kind==="ev"&&match(q,it.ev.title+" "+it.ev.type+" "+(it.ev.location||"")+" "+(it.ev.notes||""));}).slice(0,200).map(function(it){return evOut(it.ev,it.date);});}
+    else out.events=allEvents().filter(function(ev){return match(q,ev.title+" "+ev.type+" "+(ev.location||"")+" "+(ev.notes||""));}).slice(0,200).map(function(ev){var o=evOut(ev);o.next_date=nextOcc(ev)||"";return o;});
+  }
+  if(k==="tasks"||k==="all")out.tasks=D.tasks.filter(function(t){return (a.include_done||!t.done)&&match(q,t.text+" "+t.cat+" "+(t.notes||""))&&(!isDate(a.from)||(t.due&&t.due>=a.from))&&(!isDate(a.to)||(t.due&&t.due<=a.to));}).slice(0,300).map(taskOut);
+  if(k==="contacts"||k==="all")out.contacts=D.contacts.filter(function(c){return match(q,c.name+" "+(c.email||"")+" "+(c.phone||"")+" "+(c.group||"")+" "+(c.notes||""));}).slice(0,300).map(ctOut);
+  if(k==="sent"||k==="all")out.sent=D.sent.filter(function(s){return match(q,s.subject+" "+s.body+" "+s.recips.map(function(r){return r.name+" "+r.email;}).join(" "));}).slice(0,40).map(function(s){return {date:new Date(s.at).toLocaleString(),subject:s.subject,to:s.recips.map(function(r){return (r.name?r.name+" ":"")+"<"+r.email+">"+(r.ok?"":" (failed)");}),body:s.body.slice(0,1500)};});
+  if(k==="files"||k==="all")out.files=LIB.filter(function(f){return match(q,f.name);}).map(function(f){return {id:f.id,name:f.name,size:fsize(f.size),saved:new Date(f.added).toLocaleDateString()};});
+  return JSON.stringify(out);
+ },
+ add_events:function(a){
+  var ok=[],bad=[],ids=[];
+  (a.events||[]).forEach(function(e){
+    if(!e.title||!isDate(e.date)){bad.push((e.title||"(no title)")+": needs a real date");return;}
+    var r=peopleFrom(e.remind_email_to),hasT=isTime(e.time);
+    var ev={id:uid(),created:Date.now(),title:String(e.title),type:pickFrom(D.settings.eventTypes,e.type,D.settings.eventTypes.indexOf("Appointment")>=0?"Appointment":D.settings.eventTypes[0]),date:e.date,time:hasT?e.time:"",endTime:hasT&&isTime(e.end_time)?e.end_time:"",allDay:!hasT,location:e.location||"",repeat:["daily","weekly","monthly","yearly"].indexOf(e.repeat)>=0?e.repeat:"none",until:isDate(e.until)?e.until:"",notes:e.notes||"",remind:remindVal(e.remind_minutes,D.settings.defRemind),status:"Scheduled",emailMe:!!e.remind_email_me,emailOthers:!!(r.ids.length||r.extra),people:r.ids,extra:r.extra};
+    D.events.push(ev);ids.push(ev.id);ok.push(ev.title+" — "+eventWhen(ev));
+  });
+  if(ids.length){save();addNote({kind:"done",text:"**Added to calendar:**\n"+ok.map(function(x){return "- "+x;}).join("\n"),undo:{kind:"events",ids:ids}});}
+  return JSON.stringify({added:ok,ids:ids,problems:bad});
+ },
+ update_event:function(a){
+  var ev=D.events.filter(function(x){return x.id===a.id;})[0];if(!ev)return {error:"No event with that id (birthdays come from Contacts and are changed there)."};
+  if(a.title)ev.title=a.title;if(isDate(a.date))ev.date=a.date;
+  if(a.time!=null){if(isTime(a.time)){ev.time=a.time;ev.allDay=false;}else if(a.time===""){ev.time="";ev.allDay=true;}}
+  if(a.end_time!=null)ev.endTime=isTime(a.end_time)?a.end_time:"";
+  if(a.type)ev.type=pickFrom(D.settings.eventTypes,a.type,ev.type);
+  ["location","notes"].forEach(function(k){if(a[k]!=null)ev[k]=a[k];});
+  if(a.repeat)ev.repeat=["daily","weekly","monthly","yearly"].indexOf(a.repeat)>=0?a.repeat:"none";
+  if(a.until!=null)ev.until=isDate(a.until)?a.until:"";
+  if(a.remind_minutes!=null)ev.remind=remindVal(a.remind_minutes,ev.remind);
+  if(["Scheduled","Completed","Cancelled"].indexOf(a.status)>=0)ev.status=a.status;
+  clearNotified(ev.id);save();addNote({kind:"done",text:"**Updated:** "+ev.title+" — "+eventWhen(ev)+(ev.status!=="Scheduled"?" ("+ev.status+")":"")});
+  return JSON.stringify({updated:evOut(ev)});
+ },
+ add_tasks:function(a){
+  var ids=[],ok=[];
+  (a.tasks||[]).forEach(function(t){if(!t.text)return;
+    var x={id:uid(),created:Date.now(),text:String(t.text),cat:pickFrom(D.settings.taskCats,t.category,D.settings.taskCats[0]),pri:["High","Normal","Low"].indexOf(t.priority)>=0?t.priority:"Normal",due:isDate(t.due)?t.due:"",time:isTime(t.time)?t.time:"",remind:isDate(t.due)?remindVal(t.remind_minutes,"-1"):"-1",done:false,notes:t.notes||""};
+    D.tasks.push(x);ids.push(x.id);ok.push(taskText(x).replace(/^- /,""));});
+  if(ids.length){save();renderMenu();addNote({kind:"done",text:"**Added to Do List:**\n"+ok.map(function(x){return "- "+x;}).join("\n"),undo:{kind:"tasks",ids:ids}});}
+  return JSON.stringify({added:ok,ids:ids});
+ },
+ update_task:function(a){
+  var t=D.tasks.filter(function(x){return x.id===a.id;})[0];if(!t)return {error:"No task with that id."};
+  if(a.done!=null){t.done=!!a.done;t.doneAt=t.done?Date.now():null;}
+  if(a.text)t.text=a.text;if(a.category)t.cat=pickFrom(D.settings.taskCats,a.category,t.cat);
+  if(["High","Normal","Low"].indexOf(a.priority)>=0)t.pri=a.priority;
+  if(a.due!=null)t.due=isDate(a.due)?a.due:"";if(a.time!=null)t.time=isTime(a.time)?a.time:"";if(a.notes!=null)t.notes=a.notes;
+  clearNotified(t.id);save();renderMenu();addNote({kind:"done",text:"**Updated task:** "+taskText(t).replace(/^- /,"")});
+  return JSON.stringify({updated:taskOut(t)});
+ },
+ add_contacts:function(a){
+  var ids=[],ok=[],skip=[];
+  (a.contacts||[]).forEach(function(c){if(!c.name)return;
+    if(c.email&&D.contacts.some(function(x){return (x.email||"").toLowerCase()===String(c.email).toLowerCase();})){skip.push(c.name+" (email already saved)");return;}
+    var x={id:uid(),created:Date.now(),title:["Mr.","Mrs.","Miss","Ms.","Dr.","Rev."].indexOf(c.title)>=0?c.title:"",name:String(c.name),email:validEmail(c.email)?c.email.trim():"",phone:c.phone||"",group:pickFrom(D.settings.groups,c.group,D.settings.groups[D.settings.groups.length-1]),addr:c.address||"",bday:isDate(c.birthday)?c.birthday:"",notes:c.notes||""};
+    D.contacts.push(x);ids.push(x.id);ok.push((x.title?x.title+" ":"")+x.name+(x.email?" <"+x.email+">":""));});
+  if(ids.length){save();addNote({kind:"done",text:"**Saved to Contacts:**\n"+ok.map(function(x){return "- "+x;}).join("\n"),undo:{kind:"contacts",ids:ids}});}
+  return JSON.stringify({saved:ok,ids:ids,skipped:skip});
+ },
+ update_contact:function(a){
+  var c=D.contacts.filter(function(x){return x.id===a.id;})[0];if(!c)return {error:"No contact with that id."};
+  if(a.title!=null)c.title=["Mr.","Mrs.","Miss","Ms.","Dr.","Rev."].indexOf(a.title)>=0?a.title:"";
+  if(a.name)c.name=a.name;if(a.email!=null){if(a.email&&!validEmail(a.email))return {error:"Not a valid email address."};c.email=a.email;}
+  if(a.phone!=null)c.phone=a.phone;if(a.group)c.group=pickFrom(D.settings.groups,a.group,c.group);
+  if(a.address!=null)c.addr=a.address;if(a.birthday!=null)c.bday=isDate(a.birthday)?a.birthday:"";if(a.notes!=null)c.notes=a.notes;
+  save();addNote({kind:"done",text:"**Updated contact:** "+(c.title?c.title+" ":"")+c.name});
+  return JSON.stringify({updated:ctOut(c)});
+ },
+ delete_items:function(a){
+  var k=a.kind,ids=a.ids||[],names=[];
+  ids.forEach(function(id){
+    var x=k==="events"?D.events.filter(function(e){return e.id===id;})[0]:k==="tasks"?D.tasks.filter(function(e){return e.id===id;})[0]:k==="contacts"?D.contacts.filter(function(e){return e.id===id;})[0]:LIB.filter(function(e){return e.id===id;})[0];
+    if(x)names.push(k==="events"?x.title+" — "+fmtD(x.date):k==="tasks"?x.text:x.name);
+  });
+  if(!names.length)return {error:"None of those ids were found."};
+  var n=addNote({kind:"delete",items:names,state:"pending"});
+  return new Promise(function(r){pending[n.id]=r;busy("Waiting for you to confirm…");}).then(function(choice){
+    if(choice!=="send"){n.state="cancelled";n.result="Cancelled — nothing deleted.";save();return "The owner cancelled. Nothing was deleted.";}
+    var p=Promise.resolve();
+    if(k==="events"){D.events=D.events.filter(function(e){return ids.indexOf(e.id)<0;});ids.forEach(clearNotified);}
+    else if(k==="tasks"){D.tasks=D.tasks.filter(function(e){return ids.indexOf(e.id)<0;});}
+    else if(k==="contacts"){D.contacts=D.contacts.filter(function(e){return ids.indexOf(e.id)<0;});}
+    else p=Promise.all(ids.map(function(id){return fx("readwrite",function(st){return st.delete(id);});})).then(libLoad);
+    return p.then(function(){n.state="done";n.result="Deleted "+names.length+" item(s).";save();renderMenu();return "Deleted: "+names.join("; ");});
+  });
+ },
+ send_email:function(a){
+  var r=resolveTo(a.to,a.groups);
+  if(r.problems.length&&!r.list.length)return {error:r.problems.join(" ")};
+  if(!r.list.length)return {error:"No recipients were given."};
+  if(!ejReady())return {error:"EmailJS is not set up yet (Settings → Email). Tell the owner; offer draft_email instead."};
+  var body=String(a.body||"");if(a.add_signature&&D.settings.signature.trim())body=body.replace(/\s+$/,"")+"\n\n"+D.settings.signature.trim();
+  var html=a.html?sanitizeHtml(a.html):"";if(html&&!/<(table|div|body|p)/i.test(html))html="";
+  var n=addNote({kind:"email",email:{list:r.list,subject:String(a.subject||""),body:body,html:html},state:"pending"});
+  return new Promise(function(res){pending[n.id]=res;busy("Waiting for you to press Send…");}).then(function(choice){
+    if(choice==="edit"){n.state="moved";n.result="Moved to the Email tab — not sent.";save();
+      fillEmail({subject:n.email.subject,body:n.email.body,extra:n.email.list.map(function(x){return x.email;}).join(", ")});
+      if(html){design={html:html,src:srcKey()};$("adHtml").value=html;setPreview(html);$("emFormat").value="html";}
+      show("email");return "The owner chose to edit it in the Email tab himself. It was not sent.";}
+    if(choice!=="send"){n.state="cancelled";n.result="Cancelled — not sent.";save();return "The owner cancelled. The email was not sent.";}
+    return sendBatch(n.email.list,n.email.subject,n.email.body,html).then(function(log){
+      var okc=log.recips.filter(function(x){return x.ok;}).length,bad=log.recips.filter(function(x){return !x.ok;});
+      n.state="done";n.result="Sent to "+okc+" of "+log.recips.length+(bad.length?". Failed: "+bad.map(function(x){return x.email+" ("+x.err+")";}).join(", "):".");save();
+      return n.result+(r.problems.length?" Not included: "+r.problems.join(" "):"");
+    });
+  });
+ },
+ draft_email:function(a){
+  var r=resolveTo(a.to,a.groups);
+  fillEmail({subject:a.subject||"",body:a.body||"",extra:r.list.map(function(x){return x.email;}).join(", ")});
+  addNote({kind:"done",text:"**Draft placed in the Email tab:** "+(a.subject||"(no subject)")+(r.list.length?" — to "+r.list.map(function(x){return x.name||x.email;}).join(", "):"")});
+  return JSON.stringify({ok:true,problems:r.problems});
+ },
+ read_file:function(a){
+  var m=libFind(a.name);
+  if(!m.length)return {error:"No file in My Files matches “"+a.name+"”. Files saved: "+(LIB.map(function(f){return f.name;}).join(", ")||"none")};
+  if(m.length>1&&m.length<=10&&!m.some(function(f){return f.name.toLowerCase()===String(a.name).toLowerCase();}))return {error:"Several files match: "+m.map(function(f){return f.name;}).join(", ")+". Ask which one, or use the exact name."};
+  var f=m[0];busy("Reading "+f.name+"…");
+  addNote({kind:"done",text:"📂 Opened **"+f.name+"** from My Files."});
+  return libGet(f.id).then(function(file){return fileBlocks(file);}).then(function(blocks){return {blocks:blocks};});
+ },
+ open_screen:function(a){
+  if(a.screen==="calendar"&&isDate(a.date)){cal.sel=a.date;cal.m=null;}
+  setTimeout(function(){show(a.screen);},50);
+  return "Opened the "+a.screen+" screen.";
+ }
+};
+function runTool(name,input){
+  var f=TOOL[name];if(!f)return Promise.resolve({content:"Unknown tool",is_error:true});
+  return Promise.resolve().then(function(){return f(input||{});}).then(function(r){
+    if(r&&r.error)return {content:r.error,is_error:true};
+    if(r&&r.blocks)return {content:r.blocks};
+    return {content:typeof r==="string"?r:JSON.stringify(r)};
+  }).catch(function(e){return {content:"Error: "+e.message,is_error:true};});
+}
+function apiRaw(payload){
+  var k=getKey();if(!k)return Promise.reject(new Error("No Anthropic API key. Add it in Settings → AI."));
+  var h={"content-type":"application/json","x-api-key":k,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
+  if(D.settings.workspace)h["anthropic-workspace-id"]=D.settings.workspace;
+  return fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:h,body:JSON.stringify(payload)})
+  .then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok)throw new Error((j.error&&j.error.message)||("AI error "+r.status));return j;});});
+}
+function agent(messages,system){
+  var text="",rounds=0;
+  function step(){
+    busy(rounds?"Working…":"Thinking…");
+    return apiRaw({model:MODEL,max_tokens:8000,system:system,tools:TOOLS,messages:messages}).then(function(j){
+      var content=j.content||[],t=content.filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join("");
+      if(t)text+=(text&&!/\s$/.test(text)?"\n\n":"")+t;
+      if(j.stop_reason==="tool_use"&&rounds++<20){
+        messages.push({role:"assistant",content:content});
+        var uses=content.filter(function(b){return b.type==="tool_use";}),results=[];
+        return uses.reduce(function(p,u){return p.then(function(){return runTool(u.name,u.input).then(function(r){var o={type:"tool_result",tool_use_id:u.id,content:r.content};if(r.is_error)o.is_error=true;results.push(o);});});},Promise.resolve())
+          .then(function(){messages.push({role:"user",content:results});text="";return step();});
+      }
+      if(j.stop_reason==="max_tokens"&&rounds++<20){
+        messages.push({role:"assistant",content:content});messages.push({role:"user",content:"Continue exactly where you stopped. Do not repeat anything."});return step();
+      }
+      return text;
+    });
+  }
+  return step();
+}
+function agentSystem(){
+  var n=new Date(),t=today();
+  var nextDays=itemsBetween(t,addDays(t,7)).filter(function(it){return it.kind==="ev"?it.ev.status!=="Cancelled":!it.task.done;}).slice(0,40).map(itemText);
+  return RULES+"\n\nYou are the owner's assistant inside his personal planner app “My Planner & Mail”. You can do everything in the app with your tools: look up and change his calendar, reminders, Do List and contacts; email anything to anyone (saved contacts by name or group, or any address); put drafts in the Email tab; read any file saved in My Files; and open screens. He can also attach files directly to his message — read them fully and extract exactly what he asks.\n"+
+  "- When he asks you to do something, do it with the tools instead of explaining how. Do several items in one call.\n"+
+  "- Search first when you need ids or details of existing items. Resolve relative dates (\"next Tuesday\") from today's date. Use 24-hour HH:MM in tools.\n"+
+  "- Emails: build the message from his actual planner data or his words. send_email shows him a preview card with a Send button, so call it directly. Never invent an email address; if a name is not found, tell him. Use a contact's title only if it is saved.\n"+
+  "- When asked to \"pull up\" a file, use read_file (or search_planner kind files to see the list).\n"+
+  "- After acting, reply briefly with what was done. Answer questions completely.\n\n"+
+  "Now: "+n.toLocaleString()+" ("+fmtD(t,true)+"). Owner: "+(D.settings.myName||"[name not set in Settings]")+(D.settings.myEmail?" <"+D.settings.myEmail+">":"")+".\n"+
+  "Event types: "+D.settings.eventTypes.join(", ")+". Task categories: "+D.settings.taskCats.join(", ")+". Contact groups: "+D.settings.groups.join(", ")+".\n"+
+  "Counts: "+D.events.length+" events, "+D.tasks.filter(function(x){return !x.done;}).length+" open tasks, "+D.contacts.length+" contacts, "+LIB.length+" files in My Files"+(LIB.length?" ("+LIB.slice(0,40).map(function(f){return f.name;}).join(", ")+")":"")+".\n"+
+  "Next 7 days:\n"+(nextDays.join("\n")||"(nothing)");
+}
+function chSend(){
+  if(chBusy)return;
+  var txt=$("chIn").value.trim();if(!txt&&!chFiles.length)return;
+  var files=chFiles.slice();chFiles=[];
+  if(files.length&&$("chSave").checked)libSave(files);
+  var hist=D.chat.filter(function(m){return (m.role==="user"||m.role==="assistant")&&!m.err;}).slice(-30).map(function(m){return {role:m.role,content:(m.text||"")+(m.files&&m.files.length?"\n[Files attached then: "+m.files.join(", ")+"]":"")};});
+  while(hist.length&&hist[0].role!=="user")hist.shift();
+  for(var i=hist.length-1;i>0;i--)if(hist[i].role===hist[i-1].role){hist[i-1].content+="\n\n"+hist[i].content;hist.splice(i,1);}
+  if(hist.length&&hist[hist.length-1].role==="user")hist.pop();
+  D.chat.push({role:"user",text:txt||"(see attached files)",files:files.map(function(f){return f.name;}),at:Date.now()});save();
+  $("chIn").value="";$("chIn").style.height="";busy(files.length?"Reading files…":"Thinking…");
+  filesToBlocks(files).then(function(blocks){
+    return agent(hist.concat([{role:"user",content:blocks.concat([{type:"text",text:txt||"Read the attached files and tell me what is in them."}])}]),agentSystem());
+  }).then(function(out){if(out&&out.trim())D.chat.push({role:"assistant",text:out.trim(),at:Date.now()});})
+  .catch(function(err){D.chat.push({role:"assistant",text:err.message,err:true,at:Date.now()});})
+  .then(function(){chBusy=false;Object.keys(pending).forEach(function(k){delete pending[k];});save();if(cur==="assistant")renderChat();else toast("The AI Assistant finished.","good");});
+}
+$("chSend").onclick=chSend;
+$("chIn").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();chSend();}});
+$("chIn").addEventListener("input",function(){this.style.height="auto";this.style.height=Math.min(200,this.scrollHeight)+"px";});
+$("chFiles").onchange=function(){Array.from(this.files||[]).forEach(function(f){chFiles.push(f);});this.value="";renderChatFiles();};
+$("chClear").onclick=function(){if(chBusy){toast("Wait until the Assistant finishes.");return;}if(!D.chat.length||!confirm("Clear the whole chat? (My Files are kept.)"))return;D.chat=[];save();renderChat();};
+function copyText(t){
+  if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(t).then(function(){toast("Copied.","good");},function(){fallbackCopy(t);});
+  fallbackCopy(t);
+}
+function fallbackCopy(t){var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy");toast("Copied.","good");}catch(e){toast("Could not copy.","bad");}a.remove();}
+function splitSubject(t){
+  var m=String(t).match(/^\s*\**subject:?\**:?\s*(.+)\n+([\s\S]*)$/i);
+  return m?{subject:m[1].replace(/\*+/g,"").trim(),body:m[2].trim()}:{body:String(t).trim()};
+}
+$("chList").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  var nid=b.getAttribute("data-nsend")||b.getAttribute("data-nedit")||b.getAttribute("data-ncancel");
+  if(nid&&pending[nid]){var r=pending[nid];delete pending[nid];var nn=noteById(nid);if(nn){nn.state="working";nn.result=b.hasAttribute("data-nsend")?(nn.kind==="email"?"Sending…":"Deleting…"):"…";}r(b.hasAttribute("data-nsend")?"send":b.hasAttribute("data-nedit")?"edit":"cancel");busy("Working…");return;}
+  if(b.hasAttribute("data-nundo")){
+    var n=noteById(b.getAttribute("data-nundo"));if(!n||!n.undo)return;var u=n.undo;
+    if(u.kind==="events")D.events=D.events.filter(function(x){return u.ids.indexOf(x.id)<0;});
+    else if(u.kind==="tasks")D.tasks=D.tasks.filter(function(x){return u.ids.indexOf(x.id)<0;});
+    else if(u.kind==="contacts")D.contacts=D.contacts.filter(function(x){return u.ids.indexOf(x.id)<0;});
+    n.undone=true;save();renderMenu();renderChat();toast("Undone.");return;
+  }
+  var i=b.getAttribute("data-ccopy")||b.getAttribute("data-cmail"),m=D.chat[+i];if(!m)return;
+  if(b.hasAttribute("data-ccopy"))copyText(m.text);
+  else{var s=splitSubject(m.text);if(($("emBody").value.trim())&&!confirm("Replace what is in the Email message box?"))return;composeFrom({subject:s.subject!=null?s.subject:$("emSubject").value,body:s.body,people:Array.from(emSel),extra:$("emExtra").value});}
+});
+/* ============ FILE EXTRACTOR ============ */
+var exFiles=[],exText="",exItems=null,exKind="";
+function drawEx(){fileChips($("exFileList"),exFiles,drawEx);}
+$("exDrop").onclick=function(){$("exFiles").click();};
+$("exFiles").onchange=function(){Array.from(this.files||[]).forEach(function(f){exFiles.push(f);});this.value="";drawEx();};
+["dragenter","dragover"].forEach(function(t){$("exDrop").addEventListener(t,function(e){e.preventDefault();this.classList.add("over");});});
+["dragleave","drop"].forEach(function(t){$("exDrop").addEventListener(t,function(e){e.preventDefault();this.classList.remove("over");});});
+$("exDrop").addEventListener("drop",function(e){Array.from((e.dataTransfer&&e.dataTransfer.files)||[]).forEach(function(f){exFiles.push(f);});drawEx();});
+$("exMode").onchange=function(){$("exAskWrap").style.display=this.value==="custom"?"":"none";};
+var EX={
+  all:"Read every attached file completely. Give: (1) what each file is, (2) a full summary, (3) every important detail — names, dates, times, amounts, addresses, phone numbers, emails, reference/account/case numbers, deadlines and instructions. Use headings and lists. Do not skip anything important.",
+  text:"Write out ALL the text in the attached files word for word, in reading order, including text inside pictures (OCR). Keep line breaks and table layout (use tabs or | between columns). Do not summarize or correct anything. Separate files with a heading.",
+  tables:"Find every table, list of numbers, amount, total and figure in the attached files. Rebuild each table as a Markdown-style table with | between columns, with a heading saying where it came from. Then list any other numbers with what they mean.",
+  events:"Find every date, event, appointment, meeting, deadline and due date in the attached files. Reply with JSON only: an array of objects {\"title\":\"\",\"date\":\"YYYY-MM-DD\",\"time\":\"HH:MM or empty\",\"endTime\":\"HH:MM or empty\",\"location\":\"\",\"notes\":\"short facts from the file\",\"type\":\"one of: TYPES\"}. Use 24-hour time. If the year is missing use the next upcoming one from today (TODAY). Skip items with no date.",
+  tasks:"Find every task, action item, thing to do, bring, pay, sign, send or call in the attached files. Reply with JSON only: an array of objects {\"text\":\"short task\",\"due\":\"YYYY-MM-DD or empty\",\"time\":\"HH:MM or empty\",\"priority\":\"High, Normal or Low\"}. Today is TODAY.",
+  contacts:"Find every person or organization with contact details in the attached files. Reply with JSON only: an array of objects {\"title\":\"\",\"name\":\"\",\"email\":\"\",\"phone\":\"\",\"address\":\"\",\"birthday\":\"YYYY-MM-DD or empty\",\"notes\":\"role or organization\"}. Put a title (Mr./Mrs./Miss/Ms./Dr./Rev.) ONLY if it is written in the file for that person — never guess one. Address lines separated by \\n."
+};
+$("exLib").onchange=function(){var id=this.value;this.value="";if(!id)return;libGet(id).then(function(f){if(!exFiles.some(function(x){return x.name===f.name&&x.size===f.size;}))exFiles.push(f);drawEx();}).catch(function(e){toast(e.message,"bad");});};
+$("exGo").onclick=function(){
+  if(!exFiles.length){toast("Add at least one file.","bad");return;}
+  if($("exSave").checked)libSave(exFiles.slice());
+  var mode=$("exMode").value,q=$("exAsk").value.trim();
+  if(mode==="custom"&&!q){toast("Type your question.","bad");$("exAsk").focus();return;}
+  var btn=this;btn.disabled=true;$("exMsg").textContent="Reading files…";$("exOut").innerHTML='<div class="empty">Working…</div>';exItems=null;exKind="";
+  filesToBlocks(exFiles).then(function(blocks){
+    $("exMsg").textContent="The AI is reading them…";
+    var p=mode==="custom"?"Answer this using the attached files. Be complete and exact.\n\n"+q:EX[mode].replace("TYPES",D.settings.eventTypes.join(", ")).replace(/TODAY/g,today());
+    return ai(blocks.concat([{type:"text",text:p}]),"You extract information from files accurately. Never invent anything that is not in the files.",mode==="text"?16000:8000);
+  }).then(function(out){
+    exText=out;$("exMsg").textContent="Done.";
+    if(["events","tasks","contacts"].indexOf(mode)>=0){
+      var arr=parseJSON(out);
+      if(Array.isArray(arr)){exItems=arr;exKind=mode;drawExItems();return;}
+    }
+    $("exOut").innerHTML='<div class="bub" style="padding:0">'+md(out)+'</div>';
+  }).catch(function(err){$("exMsg").textContent="";$("exOut").innerHTML='<div class="empty">'+esc(err.message)+'</div>';toast(err.message,"bad",8000);})
+  .then(function(){btn.disabled=false;});
+};
+function drawExItems(){
+  if(!exItems.length){$("exOut").innerHTML='<div class="empty">Nothing of that kind was found.</div>';exText="";return;}
+  var line=function(x){
+    if(exKind==="events")return "<b>"+esc(x.title)+"</b><div class='note'>"+esc(fmtD(x.date)||x.date||"")+(x.time?" "+fmtT(x.time):"")+(x.location?" · "+esc(x.location):"")+(x.notes?" · "+esc(x.notes):"")+"</div>";
+    if(exKind==="tasks")return "<b>"+esc(x.text)+"</b><div class='note'>"+(x.due?"Due "+esc(fmtD(x.due)||x.due):"No due date")+(x.time?" "+fmtT(x.time):"")+" · "+esc(x.priority||"Normal")+"</div>";
+    return "<b>"+esc((x.title?x.title+" ":"")+(x.name||""))+"</b><div class='note'>"+esc([x.email,x.phone,x.notes].filter(Boolean).join(" · "))+(x.address?"<br>"+esc(x.address).replace(/\n/g,"<br>"):"")+"</div>";
+  };
+  $("exOut").innerHTML='<div class="btns" style="margin-bottom:8px"><button class="primary sm" id="exAdd">Add selected to '+({events:"Calendar",tasks:"Do List",contacts:"Contacts"})[exKind]+'</button><button class="ghost sm" id="exAll">Select all / none</button></div>'+
+    exItems.map(function(x,i){return '<label class="pk-row"><input type="checkbox" style="width:auto" data-x="'+i+'" checked><span>'+line(x)+'</span></label>';}).join("");
+  exText=exItems.map(function(x){return exKind==="events"?(x.title+" — "+(x.date||"")+(x.time?" "+x.time:"")+(x.location?" — "+x.location:"")):exKind==="tasks"?(x.text+(x.due?" — due "+x.due:"")):([(x.title?x.title+" ":"")+x.name,x.email,x.phone,(x.address||"").replace(/\n/g,", ")].filter(Boolean).join(" — "));}).join("\n");
+  $("exAll").onclick=function(){var b=$("exOut").querySelectorAll("[data-x]"),on=Array.from(b).some(function(c){return !c.checked;});b.forEach(function(c){c.checked=on;});};
+  $("exAdd").onclick=function(){
+    var pick=Array.from($("exOut").querySelectorAll("[data-x]:checked")).map(function(c){return exItems[+c.getAttribute("data-x")];}),n=0,skip=0;
+    pick.forEach(function(x){
+      if(exKind==="events"){
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(x.date||"")){skip++;return;}
+        var ty=D.settings.eventTypes.indexOf(x.type)>=0?x.type:D.settings.eventTypes[0];
+        D.events.push({id:uid(),created:Date.now(),title:String(x.title||"Event"),type:ty,date:x.date,time:/^\d{2}:\d{2}$/.test(x.time||"")?x.time:"",endTime:/^\d{2}:\d{2}$/.test(x.endTime||"")?x.endTime:"",allDay:!/^\d{2}:\d{2}$/.test(x.time||""),location:x.location||"",repeat:"none",until:"",notes:x.notes||"",remind:D.settings.defRemind,status:"Scheduled",emailMe:false,emailOthers:false,people:[],extra:""});n++;
+      }else if(exKind==="tasks"){
+        if(!x.text){skip++;return;}
+        D.tasks.push({id:uid(),created:Date.now(),text:String(x.text),cat:D.settings.taskCats[0],pri:["High","Normal","Low"].indexOf(x.priority)>=0?x.priority:"Normal",due:/^\d{4}-\d{2}-\d{2}$/.test(x.due||"")?x.due:"",time:/^\d{2}:\d{2}$/.test(x.time||"")?x.time:"",remind:"-1",done:false,notes:""});n++;
+      }else{
+        if(!x.name&&!x.email){skip++;return;}
+        if(x.email&&D.contacts.some(function(c){return (c.email||"").toLowerCase()===String(x.email).toLowerCase();})){skip++;return;}
+        var ti=["Mr.","Mrs.","Miss","Ms.","Dr.","Rev."].indexOf(x.title)>=0?x.title:"";
+        D.contacts.push({id:uid(),created:Date.now(),title:ti,name:String(x.name||x.email),email:validEmail(x.email)?x.email:"",phone:x.phone||"",group:D.settings.groups[D.settings.groups.length-1],addr:x.address||"",bday:/^\d{4}-\d{2}-\d{2}$/.test(x.birthday||"")?x.birthday:"",notes:x.notes||""});n++;
+      }
+    });
+    save();renderMenu();toast(n+" added"+(skip?", "+skip+" skipped (missing date/name or already saved)":"")+".","good",6000);
+  };
+}
+$("exCopy").onclick=function(){if(!exText){toast("Nothing to copy yet.");return;}copyText(exText);};
+$("exToEmail").onclick=function(){if(!exText){toast("Extract something first.");return;}if($("emBody").value.trim()&&!confirm("Replace what is in the Email message box?"))return;composeFrom({body:exText,people:Array.from(emSel),extra:$("emExtra").value});};
+$("exToChat").onclick=function(){if(!exFiles.length){toast("Add files first.");return;}exFiles.forEach(function(f){chFiles.push(f);});show("assistant");$("chIn").value="";$("chIn").placeholder="Ask about the attached files…";$("chIn").focus();};
+/* ============ SETTINGS ============ */
+var TPL='<div style="display:{{html_display}}">{{{message_html}}}</div>\n<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;white-space:pre-line;display:{{text_display}}">{{message}}</div>';
+function lines(v){var seen={};return String(v||"").split(/\r?\n/).map(function(s){return s.trim();}).filter(function(s){if(!s||seen[s.toLowerCase()])return false;seen[s.toLowerCase()]=1;return true;});}
+function renderSettings(){
+  var s=D.settings;
+  $("sName").value=s.myName;$("sEmail").value=s.myEmail;$("sSig").value=s.signature;
+  var k="";try{k=localStorage.getItem(APIKEY)||"";}catch(e){}
+  $("sKey").value=k;$("sWs").value=s.workspace||"";
+  $("sEjS").value=s.ej.service;$("sEjT").value=s.ej.template;$("sEjK").value=s.ej.key;
+  $("sTpl").value=TPL;
+  $("sTypes").value=s.eventTypes.join("\n");$("sCats").value=s.taskCats.join("\n");$("sGroups").value=s.groups.join("\n");
+  $("sDefRem").innerHTML=remindOpts(s.defRemind);
+  $("sNotifMsg").textContent=!("Notification" in window)?"This browser does not support them.":Notification.permission==="granted"?"On.":Notification.permission==="denied"?"Blocked in the browser settings.":"";
+}
+function saveSettings(){
+  var s=D.settings;
+  s.myName=$("sName").value.trim();s.myEmail=$("sEmail").value.trim();s.signature=$("sSig").value;
+  s.workspace=$("sWs").value.trim();
+  s.ej={service:$("sEjS").value.trim(),template:$("sEjT").value.trim(),key:$("sEjK").value.trim()};
+  var t=lines($("sTypes").value),c=lines($("sCats").value),g=lines($("sGroups").value);
+  s.eventTypes=t.length?t:DEF_SETTINGS.eventTypes.slice();s.taskCats=c.length?c:DEF_SETTINGS.taskCats.slice();s.groups=g.length?g:DEF_SETTINGS.groups.slice();
+  s.defRemind=$("sDefRem").value;
+  var k=$("sKey").value.trim();try{if(k)localStorage.setItem(APIKEY,k);else localStorage.removeItem(APIKEY);}catch(e){}
+  save();
+}
+["sName","sEmail","sSig","sKey","sWs","sEjS","sEjT","sEjK","sTypes","sCats","sGroups","sDefRem"].forEach(function(id){$(id).addEventListener("change",function(){
+  if(id==="sEmail"&&this.value.trim()&&!validEmail(this.value)){toast("That email address does not look right.","bad");}
+  saveSettings();toast("Saved.","good",1500);
+});});
+$("sKeyFind").onclick=function(){var k=findKey();if(!k){$("sKeyMsg").textContent="No key found from your other tools on this web address. Paste it above.";return;}$("sKey").value=k;saveSettings();$("sKeyMsg").textContent="Found and saved.";};
+$("sKeyTest").onclick=function(){saveSettings();$("sKeyMsg").textContent="Testing…";ai("Reply with only the word OK.","",20).then(function(t){$("sKeyMsg").textContent="Working ("+t.trim().slice(0,20)+").";}).catch(function(e){$("sKeyMsg").textContent=e.message;});};
+$("sEjFind").onclick=function(){
+  var found=null;
+  try{var c=JSON.parse(localStorage.getItem("dcm_ai_lock_cfg")||"null");if(c&&c.ej&&c.ej.service)found=c.ej;}catch(e){}
+  if(!found){try{for(var i=0;i<localStorage.length&&!found;i++){var v=localStorage.getItem(localStorage.key(i))||"";if(v.indexOf("service_")<0||localStorage.key(i)===KEY)continue;
+    try{var o=JSON.parse(v);var ej=o&&(o.ej||o.emailjs||o);if(ej&&ej.service&&ej.template&&ej.key)found=ej;}catch(e){}}}catch(e){}}
+  if(!found){$("sEjMsg").textContent="CaseWork's EmailJS settings were not found on this web address. Type them in.";return;}
+  $("sEjS").value=found.service||"";$("sEjT").value=found.template||"";$("sEjK").value=found.key||"";saveSettings();$("sEjMsg").textContent="Copied from CaseWork.";
+};
+$("sEjTest").onclick=function(){
+  saveSettings();
+  if(!validEmail(D.settings.myEmail)){$("sEjMsg").textContent="Add your email above first.";return;}
+  $("sEjMsg").textContent="Sending…";
+  sendEmail({to:D.settings.myEmail,toName:D.settings.myName,subject:"Test email from Personal Planner & Mail",text:"This is a test email. EmailJS is working."})
+    .then(function(){$("sEjMsg").textContent="Sent. Check your inbox.";}).catch(function(e){$("sEjMsg").textContent=e.message;});
+};
+$("sTplCopy").onclick=function(){copyText(TPL);};
+$("sNotif").onclick=function(){
+  if(!("Notification" in window)){$("sNotifMsg").textContent="This browser does not support them.";return;}
+  Notification.requestPermission().then(function(p){$("sNotifMsg").textContent=p==="granted"?"On.":"Not allowed.";if(p==="granted")try{new Notification("Notifications are on",{body:"Reminders will show here."});}catch(e){}});
+};
+$("sExport").onclick=function(){
+  var blob=new Blob([JSON.stringify({app:"Personal Planner & Mail",version:1,saved:new Date().toISOString(),data:D},null,1)],{type:"application/json"});
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="planner-backup-"+today()+".json";document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);
+};
+$("sImport").onchange=function(){
+  var f=this.files&&this.files[0];this.value="";if(!f)return;
+  readAs(f,"Text").then(function(t){
+    var j=JSON.parse(t),d=j&&j.data?j.data:j;
+    if(!d||!Array.isArray(d.events)||!Array.isArray(d.tasks)||!Array.isArray(d.contacts))throw new Error("This is not a planner backup file.");
+    if(!confirm("Replace everything in this planner with the backup from "+(j.saved?new Date(j.saved).toLocaleString():"this file")+"?"))return;
+    localStorage.setItem(KEY,JSON.stringify(d));load();show("settings");toast("Backup restored.","good");
+  }).catch(function(e){toast(e.message||"Could not read the backup.","bad");});
+};
+$("sClearSent").onclick=function(){if(!D.sent.length){toast("The sent list is empty.");return;}if(!confirm("Clear the list of "+D.sent.length+" sent email(s)?"))return;D.sent=[];save();toast("Cleared.");};
+/* ============ REMINDER CHECKER ============ */
+var mailQ=[],mailBusy=false,pageStart=Date.now();
+function queueMail(o){mailQ.push(o);if(!mailBusy)pumpMail();}
+function pumpMail(){
+  var o=mailQ.shift();if(!o){mailBusy=false;return;}mailBusy=true;
+  sendEmail(o).then(function(){D.sent.unshift({id:uid(),at:Date.now(),subject:o.subject,body:o.text,html:"",recips:[{email:o.to,name:o.toName||"",ok:true}]});save();})
+  .catch(function(e){toast("Reminder email to "+o.to+" failed: "+e.message,"bad",9000);D.sent.unshift({id:uid(),at:Date.now(),subject:o.subject,body:o.text,html:"",recips:[{email:o.to,name:o.toName||"",ok:false,err:e.message}]});save();})
+  .then(function(){return wait(1100);}).then(pumpMail);
+}
+function fire(kind,item,date,start,late){
+  var title=kind==="ev"?item.title:item.text;
+  var whenTxt=kind==="ev"?eventWhen(item,date):("Due "+fmtD(date,true)+(item.time?", "+fmtT(item.time):""));
+  var msg='<b>&#9200; '+esc(title)+'</b><div class="note">'+esc(whenTxt)+(kind==="ev"&&item.location?" · "+esc(item.location):"")+(late?" (reminder time passed while the page was closed)":"")+'</div>';
+  toast(msg,"rem",0);
+  if("Notification" in window&&Notification.permission==="granted"){try{new Notification("Reminder: "+title,{body:whenTxt+(kind==="ev"&&item.location?"\n"+item.location:""),tag:item.id+date});}catch(e){}}
+  if(kind!=="ev"||!ejReady())return;
+  var subj="Reminder: "+title+" — "+fmtD(date),body=eventText(item,date);
+  if(item.emailMe&&validEmail(D.settings.myEmail))queueMail({to:D.settings.myEmail,toName:D.settings.myName,subject:subj,text:body});
+  if(item.emailOthers){recipients(item.people||[],item.extra||"").list.forEach(function(r){if(r.email.toLowerCase()===(D.settings.myEmail||"").toLowerCase()&&item.emailMe)return;queueMail({to:r.email,toName:r.name,subject:subj,text:body});});}
+}
+function checkReminders(){
+  var now=new Date(),t=today(),from=addDays(t,-1),to=addDays(t,8),changed=false;
+  allEvents().forEach(function(ev){
+    if(ev.status!=="Scheduled"||ev.remind==null||String(ev.remind)==="-1")return;
+    occ(ev,from,to).forEach(function(d){
+      var start=dtOf(d,ev.allDay||!ev.time?"09:00":ev.time),at=new Date(start-(+ev.remind)*60000),k=ev.id+"|"+d+"|"+ev.remind;
+      if(now>=at&&now<new Date(+start+12*3600000)&&!D.notified[k]){D.notified[k]=Date.now();changed=true;fire("ev",ev,d,start,+at<pageStart-60000);}
+    });
+  });
+  D.tasks.forEach(function(x){
+    if(x.done||!x.due||x.remind==null||String(x.remind)==="-1"||x.due<from)return;
+    var start=dtOf(x.due,x.time||"09:00"),at=new Date(start-(+x.remind)*60000),k=x.id+"|"+x.due+"|"+x.remind;
+    if(now>=at&&now<new Date(+start+12*3600000)&&!D.notified[k]){D.notified[k]=Date.now();changed=true;fire("task",x,x.due,start,+at<pageStart-60000);}
+  });
+  var cut=addDays(t,-60);Object.keys(D.notified).forEach(function(k){var d=k.split("|")[1];if(d&&d<cut){delete D.notified[k];changed=true;}});
+  if(changed)save();
+  renderMenu();
+}
+/* ============ START ============ */
+window.addEventListener("storage",function(e){
+  if(e.key!==KEY)return;load();
+  if(["calendar","todo","contacts"].indexOf(cur)>=0)show(cur);
+});
+load();getKey();libLoad();
+document.querySelector("#v-email .note").innerHTML="Each person gets their own email. In the subject or message, <code>{name}</code> puts each person&rsquo;s saved full name, <code>{first}</code> the first name, and <code>{formal}</code> their saved title and last name (for example Mrs. Smith; only if you saved a title).";
+applyPin();if(UI.pin&&wide())document.body.classList.add("menu-open");fsLabel();
+tickClock();setInterval(tickClock,15000);
+show("calendar");
+checkReminders();setInterval(checkReminders,30000);
+})();
+</script>
+</body>
+</html>
