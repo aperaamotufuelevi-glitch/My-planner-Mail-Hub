@@ -2022,110 +2022,222 @@ show("calendar");
 checkReminders();setInterval(checkReminders,30000);
 })();
 </script>
-<script>/* (added) PRINT: a Print button in the top bar prints the page you are on as a clean document --
-   heading with the page name and the date/time printed, no menu or buttons, typed-in text printed in
-   full, the calendar sideways (landscape) so the month fits. Ctrl+P / the browser's Print does the same. */
-(function(){
-  var st=document.createElement("style");
-  st.textContent=
-    ".ppmPrintHead{display:none}"+
-    "@media print{"+
-      "html,body{background:#fff!important}"+
-      ".side,.scrim,.top,.toast,#toasts,.toasts,dialog,.modal,.overlay{display:none!important}"+
-      ".shell,.main,.wrap{display:block!important;margin:0!important;padding:0!important;max-width:none!important;width:auto!important;height:auto!important;overflow:visible!important;box-shadow:none!important}"+
-      ".view{display:none!important}.view.on{display:block!important}"+
-      "button,.btns,.seg,.iconbtn,.sidebtn,input[type=file],input[type=button],input[type=submit]{display:none!important}"+
-      ".ppmPrintHead{display:block!important;border-bottom:2px solid #000;margin:0 0 12px;padding:0 0 6px;color:#000}"+
-      ".ppmPrintHead b{font-size:18px;display:block}.ppmPrintHead span{font-size:12px}"+
-      ".card{box-shadow:none!important;break-inside:avoid;page-break-inside:avoid;border:1px solid #999!important}"+
-      "input,select,textarea{border:0!important;border-bottom:1px solid #999!important;background:none!important;box-shadow:none!important;color:#000!important;-webkit-appearance:none;appearance:none}"+
-      "textarea{display:none!important}.ppmTa{display:block!important;white-space:pre-wrap;word-wrap:break-word;border-bottom:1px solid #999;padding:2px 0;min-height:1em}"+
-      "a{color:#000!important;text-decoration:none!important}"+
-      "*{-webkit-print-color-adjust:exact;print-color-adjust:exact}"+
-      ".calwrap{display:block!important}.calgrid{break-inside:auto}"+
-    "}"+
-    ".ppmTa{display:none}";
-  document.head.appendChild(st);
-  var page=document.createElement("style");document.head.appendChild(page);
-  var head=null,tas=[];
-  function prep(){
-    undo();
-    if(document.body.classList.contains("ppmDayMode"))return;
-    var v=document.querySelector(".view.on");if(!v)return;
-    var title=(document.getElementById("topTitle")||{}).textContent||"";
-    head=document.createElement("div");head.className="ppmPrintHead";
-    var n=new Date();
-    head.innerHTML="<b>My Planner &amp; Mail &mdash; "+title.replace(/[<>&]/g,"")+"</b><span>Printed "+n.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"})+" at "+n.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})+"</span>";
-    v.insertBefore(head,v.firstChild);
-    /* show the whole text typed in boxes (a box only shows part of it on paper) */
-    v.querySelectorAll("textarea").forEach(function(t){if(!t.offsetParent&&!t.value)return;var d=document.createElement("div");d.className="ppmTa";d.textContent=t.value;t.parentNode.insertBefore(d,t.nextSibling);tas.push(d);});
-    page.textContent="@media print{@page{size:"+(v.id==="v-calendar"?"landscape":"portrait")+";margin:12mm}}";
-  }
-  function undo(){if(head&&head.parentNode)head.parentNode.removeChild(head);head=null;tas.forEach(function(d){if(d.parentNode)d.parentNode.removeChild(d)});tas=[];}
-  window.addEventListener("beforeprint",prep);
-  window.addEventListener("afterprint",undo);
-  var fs=document.getElementById("fsBtn");
-  if(fs){var b=document.createElement("button");b.className="iconbtn";b.id="printBtn";b.type="button";b.title="Print this page";b.innerHTML="&#128424; <span>Print</span>";
-    b.onclick=function(){prep();window.print();};
-    fs.parentNode.insertBefore(b,fs);}
-})();
-</script>
-<script>/* (added) PRINT THIS DAY: on the Calendar, "Print this day" prints only the selected day and everything
-   on it -- every event and Do List task with all its details -- on its own page. */
+<script>/* (added) PRINT / PDF REPORTS + DAY WINDOW
+   - Print (top bar, or Ctrl+P) prints a professional report of what is SAVED on the page you are on --
+     never the empty entry forms:
+       Calendar: the month as a calendar (landscape) + the month's agenda;  Reminders: upcoming and past
+       appointments;  Do List: open and completed tasks;  Contacts: a directory;  Email: the message being
+       written + the sent-email log;  AI Assistant: the conversation;  File Extractor: saved files + result;
+       Settings: a summary (keys and passwords are never printed).
+   - Clicking a day on the Calendar opens a day window with everything on that day and buttons to add an
+     event or task, email the day, or print the day (double-click still adds an event).
+   - "Print this day" prints only that day with every detail. */
 (function(){
   var KEY="ppm_data_v1";
-  var REM={"-1":"No reminder","0":"At the time","10":"10 minutes before","30":"30 minutes before","60":"1 hour before","120":"2 hours before","1440":"1 day before","2880":"2 days before","10080":"1 week before"};
+  var REM={"-1":"","0":"At the time","10":"10 min before","30":"30 min before","60":"1 hour before","120":"2 hours before","1440":"1 day before","2880":"2 days before","10080":"1 week before"};
   var REP={daily:"Every day",weekly:"Every week",monthly:"Every month",yearly:"Every year"};
+  var MON=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  /* ---------- helpers ---------- */
+  function $(id){return document.getElementById(id);}
+  function E(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+  function data(){var D;try{D=JSON.parse(localStorage.getItem(KEY)||"{}")||{};}catch(e){D={};}["events","tasks","contacts","sent","chat"].forEach(function(k){if(!Array.isArray(D[k]))D[k]=[];});D.settings=D.settings||{};return D;}
+  function pad(n){return (n<10?"0":"")+n;}
+  function iso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+  function parse(s){if(!s)return null;var p=String(s).split("-");if(p.length<3)return null;var d=new Date(+p[0],+p[1]-1,+p[2]);return isNaN(d)?null:d;}
+  function addDays(s,n){var d=parse(s);d.setDate(d.getDate()+n);return iso(d);}
+  function addMonths(s,n){var d=parse(s),day=d.getDate();var x=new Date(d.getFullYear(),d.getMonth()+n,1);var last=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();x.setDate(Math.min(day,last));return iso(x);}
+  function today(){return iso(new Date());}
+  function fD(s,long){var d=parse(s);return d?d.toLocaleDateString(undefined,long?{weekday:"long",month:"long",day:"numeric",year:"numeric"}:{weekday:"short",month:"short",day:"numeric",year:"numeric"}):"";}
+  function t12(t){if(!/^\d{1,2}:\d{2}/.test(t||""))return "";var p=t.split(":"),h=+p[0];return (h%12||12)+":"+p[1]+" "+(h<12?"AM":"PM");}
+  function phone(p){var d=String(p||"").replace(/\D/g,"");if(d.length===11&&d[0]==="1")d=d.slice(1);return d.length===10?"("+d.slice(0,3)+")"+d.slice(3,6)+"-"+d.slice(6):String(p||"");}
+  function cname(c){return c?((c.title?c.title+" ":"")+(c.name||[c.first,c.last].filter(Boolean).join(" ")||c.email||"")):"";}
+  function occ(ev,from,to){
+    var out=[];if(!ev.date)return out;var rep=ev.repeat||"none",until=ev.until||"9999-12-31";
+    if(rep==="none"){if(ev.date>=from&&ev.date<=to)out.push(ev.date);return out;}
+    var n0=0;if(ev.date<from){var a=parse(ev.date),b=parse(from),days=Math.floor((b-a)/864e5);
+      n0=rep==="daily"?Math.max(0,days-1):rep==="weekly"?Math.max(0,Math.floor(days/7)-1):rep==="monthly"?Math.max(0,(b.getFullYear()-a.getFullYear())*12+b.getMonth()-a.getMonth()-1):Math.max(0,b.getFullYear()-a.getFullYear()-1);}
+    for(var n=n0,g=0;g<800;n++,g++){var d=rep==="daily"?addDays(ev.date,n):rep==="weekly"?addDays(ev.date,7*n):rep==="monthly"?addMonths(ev.date,n):addMonths(ev.date,12*n);if(d>to||d>until)break;if(d>=from)out.push(d);}
+    return out;
+  }
+  function allEvents(D){return D.events.concat(D.contacts.filter(function(c){return c.bday;}).map(function(c){return {id:"bd_"+c.id,title:"Birthday: "+cname(c),type:"Birthday",date:c.bday,allDay:true,repeat:"yearly",remind:"-1",status:"Scheduled",fromContact:true};}));}
+  function items(D,from,to){
+    var out=[];allEvents(D).forEach(function(ev){occ(ev,from,to).forEach(function(d){out.push({kind:"ev",ev:ev,date:d,time:ev.allDay?"":(ev.time||"")});});});
+    D.tasks.forEach(function(t){if(t.due&&t.due>=from&&t.due<=to)out.push({kind:"task",task:t,date:t.due,time:t.time||""});});
+    out.sort(function(a,b){return (a.date+(a.time||"00:00")).localeCompare(b.date+(b.time||"00:00"));});return out;
+  }
+  function people(D,ev){var cons=D.contacts;return (ev.people||[]).map(function(p){return cname(cons.filter(function(c){return c.id===p;})[0]);}).filter(Boolean).concat(String(ev.extra||"").split(/[,;]\s*/).filter(Boolean)).join(", ");}
+  function when(it){return it.kind==="ev"?(it.ev.allDay||!it.ev.time?"All day":t12(it.ev.time)+(it.ev.endTime?" – "+t12(it.ev.endTime):"")):(it.time?t12(it.time):"");}
+  function status(s){return s&&s!=="Scheduled"?'<span class="tag '+(s==="Cancelled"?"red":"grn")+'">'+E(s)+'</span>':"";}
+  function notes(n){return n?'<div class="nt">'+E(n)+'</div>':"";}
+  /* ---------- the report frame ---------- */
+  function frame(title,sub,body,opt){
+    var D=data(),S=D.settings,n=new Date();
+    var who=[S.myName,S.myEmail].filter(Boolean).map(E).join(" &middot; ");
+    return '<header class="rh"><div class="rl"><div class="brand">My Planner &amp; Mail</div><h1>'+E(title)+'</h1>'+(sub?'<div class="sub">'+sub+'</div>':'')+'</div>'+
+      '<div class="rr">'+(who?'<div><span>Prepared for</span><b>'+who+'</b></div>':'')+'<div><span>Printed</span><b>'+E(n.toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"}))+' at '+E(n.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}))+'</b></div></div></header>'+
+      body+'<footer class="rf">My Planner &amp; Mail &middot; '+E(title)+'</footer>';
+  }
+  function sec(t,count){return '<h2 class="sec">'+E(t)+(count!=null?' <span>'+count+'</span>':'')+'</h2>';}
+  function none(t){return '<div class="none">'+E(t)+'</div>';}
+  function stats(a){return '<div class="stats">'+a.map(function(x){return '<div><b>'+E(x[1])+'</b><span>'+E(x[0])+'</span></div>';}).join("")+'</div>';}
+  function evRow(D,it,showDate){
+    if(it.kind==="task"){var t=it.task;return '<tr><td class="nw">'+(showDate?'<b>'+E(fD(it.date))+'</b><br>':'')+E(when(it))+'</td><td><span class="box">'+(t.done?"&#10003;":"")+'</span> <b>'+E(t.text)+'</b>'+(t.pri==="High"?' <span class="tag red">High</span>':'')+notes(t.notes)+'</td><td>Do List'+(t.cat?' &middot; '+E(t.cat):'')+'</td><td></td><td>'+(t.done?"Done":"Open")+'</td></tr>';}
+    var ev=it.ev,ppl=people(D,ev);
+    return '<tr><td class="nw">'+(showDate?'<b>'+E(fD(it.date))+'</b><br>':'')+E(when(it))+'</td><td><b>'+E(ev.title)+'</b> '+status(ev.status)+(ppl?'<div class="mut">With: '+E(ppl)+'</div>':'')+notes(ev.notes)+'</td><td>'+E(ev.type||"")+(REP[ev.repeat]?'<div class="mut">'+REP[ev.repeat]+'</div>':'')+'</td><td>'+E(ev.location||"")+'</td><td>'+E(REM[String(ev.remind)]||"")+'</td></tr>';
+  }
+  function evTable(D,list,showDate,head5){return '<table class="t"><thead><tr><th style="width:15%">'+(showDate?"Date &amp; time":"Time")+'</th><th>What</th><th style="width:14%">Type</th><th style="width:16%">Where</th><th style="width:12%">'+(head5||"Reminder")+'</th></tr></thead><tbody>'+list.map(function(it){return evRow(D,it,showDate);}).join("")+'</tbody></table>';}
+  /* ---------- one report per page ---------- */
+  function curMonth(){
+    var l=(($("calLabel")||{}).textContent||"").trim(),m=-1,y=NaN;
+    MON.forEach(function(x,i){if(l.indexOf(x)>=0&&m<0)m=i;});var ym=l.match(/(\d{4})/);if(ym)y=+ym[1];
+    if(m<0||isNaN(y)){var cells=document.querySelectorAll("#calGrid .cell:not(.other)");var c=cells[Math.floor(cells.length/2)];var d=c?parse(c.getAttribute("data-d")):new Date();return new Date(d.getFullYear(),d.getMonth(),1);}
+    return new Date(y,m,1);
+  }
+  var R={
+    calendar:function(){
+      var D=data(),m=curMonth(),first=iso(m),last=iso(new Date(m.getFullYear(),m.getMonth()+1,0));
+      var start=addDays(first,-m.getDay()),its=items(D,start,addDays(start,41)),by={};its.forEach(function(it){(by[it.date]=by[it.date]||[]).push(it);});
+      var t=today(),g='<table class="cal"><thead><tr>'+["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(function(x){return '<th>'+x+'</th>';}).join("")+'</tr></thead><tbody>';
+      for(var w=0;w<6;w++){var row='';var any=false;for(var d=0;d<7;d++){var ds=addDays(start,w*7+d),dd=parse(ds),inm=dd.getMonth()===m.getMonth();if(inm)any=true;
+        var L=(by[ds]||[]);row+='<td class="'+(inm?'':'oth')+(ds===t?' tdy':'')+'"><div class="dn">'+dd.getDate()+'</div>'+L.slice(0,5).map(function(it){
+          return it.kind==="task"?'<div class="ci tk">&#9744; '+E((it.time?t12(it.time)+" ":"")+it.task.text)+'</div>':'<div class="ci'+(it.ev.status==="Cancelled"?' cx':'')+'">'+E((it.ev.allDay||!it.ev.time?"":t12(it.ev.time)+" ")+it.ev.title)+'</div>';}).join("")+(L.length>5?'<div class="ci more">+'+(L.length-5)+' more</div>':'')+'</td>';}
+        if(any||w<5)g+='<tr>'+row+'</tr>';}
+      g+='</tbody></table>';
+      var month=items(D,first,last);
+      return frame(MON[m.getMonth()]+" "+m.getFullYear(),"Calendar &middot; "+month.length+" item"+(month.length===1?"":"s")+" this month",g+
+        '<div class="pb"></div>'+sec("Agenda — "+MON[m.getMonth()]+" "+m.getFullYear(),month.length)+(month.length?evTable(D,month,true):none("Nothing scheduled this month.")));
+    },
+    reminders:function(){
+      var D=data(),t=today(),up=items(D,t,addDays(t,365)).filter(function(it){return it.kind==="ev";});
+      var past=D.events.filter(function(ev){return (ev.repeat||"none")==="none"&&ev.date&&ev.date<t;}).sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0,60).map(function(ev){return {kind:"ev",ev:ev,date:ev.date,time:ev.time||""};});
+      /* each appointment once, at its next date (a repeating one shows how often it repeats) */
+      var seen={},nextUp=up.filter(function(it){if(seen[it.ev.id])return false;seen[it.ev.id]=1;return true;}).slice(0,150);
+      return frame("Reminders & Appointments","Upcoming for the next 12 months and recent past",
+        stats([["Upcoming",nextUp.length],["Today",up.filter(function(it){return it.date===t;}).length],["Next 7 days",up.filter(function(it){return it.date<=addDays(t,6);}).length],["Saved in all",D.events.length]])+
+        sec("Upcoming",nextUp.length)+(nextUp.length?evTable(D,nextUp,true):none("Nothing upcoming."))+
+        sec("Past",past.length)+(past.length?evTable(D,past,true):none("No past appointments.")));
+    },
+    todo:function(){
+      var D=data(),t=today(),open=D.tasks.filter(function(x){return !x.done;}),done=D.tasks.filter(function(x){return x.done;});
+      var pr={High:0,Normal:1,Low:2};open.sort(function(a,b){return (a.due||"9999")===(b.due||"9999")?(pr[a.pri]||1)-(pr[b.pri]||1):(a.due||"9999").localeCompare(b.due||"9999");});
+      function row(x){var od=!x.done&&x.due&&x.due<t;return '<tr><td class="c"><span class="box">'+(x.done?"&#10003;":"")+'</span></td><td><b>'+E(x.text)+'</b>'+notes(x.notes)+'</td><td>'+E(x.cat||"")+'</td><td>'+(x.pri==="High"?'<span class="tag red">High</span>':E(x.pri||""))+'</td><td class="nw">'+(x.due?E(fD(x.due))+(x.time?'<br>'+E(t12(x.time)):'')+(od?' <span class="tag red">Overdue</span>':''):'<span class="mut">No date</span>')+'</td></tr>';}
+      function tbl(L){return '<table class="t"><thead><tr><th style="width:4%"></th><th>Task</th><th style="width:15%">Category</th><th style="width:10%">Priority</th><th style="width:20%">Due</th></tr></thead><tbody>'+L.map(row).join("")+'</tbody></table>';}
+      return frame("Do List",open.length+" open &middot; "+done.length+" done",
+        stats([["Open",open.length],["Overdue",open.filter(function(x){return x.due&&x.due<t;}).length],["Due today",open.filter(function(x){return x.due===t;}).length],["High priority",open.filter(function(x){return x.pri==="High";}).length]])+
+        sec("Open tasks",open.length)+(open.length?tbl(open):none("Nothing to do."))+sec("Done",done.length)+(done.length?tbl(done):none("No finished tasks.")));
+    },
+    contacts:function(){
+      var D=data(),L=D.contacts.slice().sort(function(a,b){return (a.name||"").localeCompare(b.name||"");});
+      return frame("Contacts",L.length+" contact"+(L.length===1?"":"s"),L.length?'<table class="t"><thead><tr><th style="width:20%">Name</th><th style="width:11%">Group</th><th style="width:13%">Phone</th><th style="width:20%">Email</th><th>Address</th><th style="width:11%">Birthday</th></tr></thead><tbody>'+
+        L.map(function(c){return '<tr><td><b>'+E(cname(c))+'</b>'+notes(c.notes)+'</td><td>'+E(c.group||"")+'</td><td class="nw">'+E(phone(c.phone))+'</td><td class="br">'+E(c.email||"")+'</td><td>'+E(c.addr||"").replace(/\n/g,"<br>")+'</td><td class="nw">'+E(c.bday?fD(c.bday):"")+'</td></tr>';}).join("")+'</tbody></table>':none("No contacts saved."));
+    },
+    email:function(){
+      var D=data(),subj=(($("emSubject")||{}).value||"").trim(),body=(($("emBody")||{}).value||"").trim(),to=[];
+      document.querySelectorAll("#emPicker .on, #emPicker input:checked").forEach(function(x){var l=(x.closest("label,.on")||x).innerText.trim();if(l&&to.indexOf(l)<0)to.push(l);});
+      var extra=(($("emExtra")||{}).value||"").trim();if(extra)to.push(extra);
+      var draft=(subj||body)?sec("Message being written")+'<div class="letter"><div><span>To</span>'+E(to.join(", ")||"—")+'</div><div><span>Subject</span><b>'+E(subj||"(no subject)")+'</b></div><div class="lb">'+E(body)+'</div></div>':"";
+      var S=D.sent.slice(0,100);
+      return frame("Email","Sent emails"+(draft?" and the message being written":""),draft+sec("Sent emails",D.sent.length)+(S.length?'<table class="t"><thead><tr><th style="width:17%">Sent</th><th style="width:28%">Subject</th><th>To</th></tr></thead><tbody>'+
+        S.map(function(l){var r=(l.recips||[]).map(function(p){return E(p.name?p.name+" <"+p.email+">":p.email)+(p.ok===false?' <span class="tag red">not sent</span>':'');}).join("<br>");
+          return '<tr><td class="nw">'+E(new Date(l.at).toLocaleString(undefined,{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"}))+'</td><td><b>'+E(l.subject||"(no subject)")+'</b><div class="mut">'+E(String(l.body||"").slice(0,160))+(String(l.body||"").length>160?"…":"")+'</div></td><td class="br">'+r+'</td></tr>';}).join("")+'</tbody></table>':none("No emails sent yet."))+(D.sent.length>100?'<div class="mut">Showing the newest 100.</div>':''));
+    },
+    assistant:function(){
+      var D=data(),C=D.chat.filter(function(m){return m&&(m.text||m.content);});
+      return frame("AI Assistant conversation",C.length+" message"+(C.length===1?"":"s"),C.length?C.map(function(m){var me=m.role==="user";return '<div class="msg '+(me?"me":"ai")+'"><div class="who">'+(me?"You":"Assistant")+'</div><div class="mt">'+E(m.text||m.content)+'</div></div>';}).join(""):none("No conversation yet."));
+    },
+    extract:function(){
+      var rows=[].slice.call(document.querySelectorAll("#libList .librow")).map(function(r){var b=r.querySelector("b"),n=r.querySelector(".note");return '<tr><td><b>'+E(b?b.innerText:"")+'</b></td><td>'+E(n?n.innerText:"")+'</td></tr>';});
+      var out=$("exOut"),res=out&&!out.querySelector(".empty")?out.innerText.trim():"";
+      return frame("File Extractor",rows.length+" saved file"+(rows.length===1?"":"s"),(res?sec("Result")+'<div class="letter"><div class="lb">'+E(res)+'</div></div>':"")+sec("My saved files",rows.length)+(rows.length?'<table class="t"><thead><tr><th>File</th><th style="width:35%">Size &middot; added</th></tr></thead><tbody>'+rows.join("")+'</tbody></table>':none("No saved files.")));
+    },
+    settings:function(){
+      var S=data().settings;function li(a){return (a||[]).length?(a||[]).map(E).join(", "):"—";}
+      return frame("Settings summary","Passwords and keys are never printed",'<table class="t kv"><tbody>'+
+        [["My name",S.myName],["My email",S.myEmail],["Default reminder",REM[String(S.defRemind)]||"None"],["Event types",li(S.eventTypes)],["Do List categories",li(S.taskCats)],["Contact groups",li(S.groups)],["Email signature",S.signature]].map(function(r){return '<tr><th>'+E(r[0])+'</th><td>'+(r[0].indexOf("types")>0||r[0].indexOf("categories")>0||r[0].indexOf("groups")>0?r[1]:E(r[1]||"—")).replace(/\n/g,"<br>")+'</td></tr>';}).join("")+'</tbody></table>');
+    }
+  };
+  function dayReport(ds){
+    var D=data(),L=items(D,ds,ds);
+    return frame(fD(ds,true),"Everything on this day &middot; "+L.length+" item"+(L.length===1?"":"s"),L.length?evTable(D,L,false,"Reminder / status"):none("Nothing on this day."));
+  }
+  /* ---------- styles ---------- */
   var st=document.createElement("style");
-  st.textContent=".ppmDaySheet{display:none}"+
-    "@media print{body.ppmDayMode .shell{display:none!important}body.ppmDayMode .ppmDaySheet{display:block!important;color:#000;font:13px/1.45 system-ui,Arial,sans-serif}"+
-    ".ppmDaySheet .h{border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:12px}.ppmDaySheet .h b{font-size:18px;display:block}.ppmDaySheet .h span{font-size:12px}"+
-    ".ppmDaySheet h2{font-size:17px;margin:0 0 10px}.ppmDaySheet table{width:100%;border-collapse:collapse}.ppmDaySheet th,.ppmDaySheet td{border:1px solid #888;padding:6px 8px;text-align:left;vertical-align:top}"+
-    ".ppmDaySheet th{background:#e6e6e6;font-size:12px;text-transform:uppercase;letter-spacing:.03em}.ppmDaySheet td.t{white-space:nowrap;width:1%;font-weight:700}.ppmDaySheet .k{font-weight:700}"+
-    ".ppmDaySheet .ttl{font-weight:700;font-size:14px}.ppmDaySheet .nt{white-space:pre-wrap;margin-top:4px;color:#000}.ppmDaySheet tr{break-inside:avoid;page-break-inside:avoid}.ppmDaySheet .empty{border:1px solid #888;padding:14px;text-align:center}"+
-    "*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}";
+  st.textContent=".ppmRep{display:none}"+
+  "@media print{body.ppmRepOn .shell,body.ppmRepOn .toast,body.ppmRepOn dialog{display:none!important}body.ppmRepOn .ppmRep{display:block!important}"+
+  "html,body{background:#fff!important}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}"+
+  ".ppmRep{color:#111;font:10.5pt/1.45 'Segoe UI',system-ui,Arial,sans-serif}"+
+  ".ppmRep .rh{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:3px solid #14324F;padding-bottom:8px;margin-bottom:12px}"+
+  ".ppmRep .brand{font-size:8.5pt;letter-spacing:.14em;text-transform:uppercase;color:#14324F;font-weight:700}.ppmRep h1{font-size:20pt;line-height:1.15;margin:2px 0 0;color:#14324F}"+
+  ".ppmRep .sub{font-size:9.5pt;color:#444;margin-top:2px}.ppmRep .rr{text-align:right;font-size:8.5pt;color:#333}.ppmRep .rr span{display:block;text-transform:uppercase;letter-spacing:.08em;color:#666;font-size:7.5pt}.ppmRep .rr b{display:block;margin-bottom:4px}"+
+  ".ppmRep .sec{font-size:12pt;color:#14324F;border-left:4px solid #1F6FB2;padding:1px 0 1px 8px;margin:16px 0 8px;break-after:avoid;page-break-after:avoid}.ppmRep .sec span{font-size:9pt;color:#fff;background:#1F6FB2;border-radius:9px;padding:1px 7px;margin-left:4px;vertical-align:2px}"+
+  ".ppmRep .stats{display:flex;gap:8px;margin:4px 0 6px}.ppmRep .stats div{flex:1;border:1px solid #C9D3DD;border-radius:6px;padding:6px 10px;background:#F4F7FA}.ppmRep .stats b{display:block;font-size:15pt;color:#14324F}.ppmRep .stats span{font-size:8pt;text-transform:uppercase;letter-spacing:.06em;color:#555}"+
+  ".ppmRep table.t{width:100%;border-collapse:collapse;font-size:9.5pt}.ppmRep table.t th{background:#14324F;color:#fff;text-align:left;font-weight:600;padding:6px 7px;font-size:8.5pt;text-transform:uppercase;letter-spacing:.04em}"+
+  ".ppmRep table.t td{padding:6px 7px;border-bottom:1px solid #D5DCE3;vertical-align:top}.ppmRep table.t tbody tr:nth-child(even) td{background:#F6F8FA}.ppmRep tr{break-inside:avoid;page-break-inside:avoid}.ppmRep thead{display:table-header-group}"+
+  ".ppmRep table.kv th{width:28%;background:#EEF2F6;color:#14324F;text-transform:none;letter-spacing:0;font-size:9.5pt;border-bottom:1px solid #D5DCE3}"+
+  ".ppmRep .nw{white-space:nowrap}.ppmRep .br{word-break:break-word}.ppmRep .c{text-align:center}.ppmRep .mut{color:#555;font-size:8.8pt;margin-top:2px}.ppmRep .nt{white-space:pre-wrap;margin-top:3px;font-size:9pt;color:#222;border-left:2px solid #C9D3DD;padding-left:6px}"+
+  ".ppmRep .tag{display:inline-block;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:3px;padding:0 5px;border:1px solid}.ppmRep .tag.red{color:#9B1C1C;border-color:#9B1C1C}.ppmRep .tag.grn{color:#1E6B34;border-color:#1E6B34}"+
+  ".ppmRep .box{display:inline-block;width:11px;height:11px;border:1.4px solid #333;border-radius:2px;line-height:10px;text-align:center;font-size:9px;vertical-align:-1px}"+
+  ".ppmRep .none{border:1px dashed #9AA5B1;border-radius:6px;padding:12px;text-align:center;color:#555}"+
+  ".ppmRep .letter{border:1px solid #C9D3DD;border-radius:6px;padding:10px 12px}.ppmRep .letter span{display:inline-block;width:70px;color:#555;text-transform:uppercase;font-size:8pt;letter-spacing:.06em}.ppmRep .letter .lb{white-space:pre-wrap;margin-top:8px;border-top:1px solid #D5DCE3;padding-top:8px}"+
+  ".ppmRep .msg{margin:0 0 8px;break-inside:avoid}.ppmRep .msg .who{font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#14324F}.ppmRep .msg .mt{white-space:pre-wrap;border-left:3px solid #1F6FB2;padding:2px 0 2px 8px}.ppmRep .msg.me .mt{border-left-color:#9AA5B1}"+
+  ".ppmRep table.cal{width:100%;border-collapse:collapse;table-layout:fixed}.ppmRep table.cal th{background:#14324F;color:#fff;font-size:8.5pt;text-transform:uppercase;letter-spacing:.06em;padding:5px}"+
+  ".ppmRep table.cal td{border:1px solid #9AA5B1;height:88px;vertical-align:top;padding:3px 4px;overflow:hidden}.ppmRep table.cal td.oth{background:#F2F4F6;color:#888}.ppmRep table.cal td.tdy{outline:2px solid #1F6FB2;outline-offset:-2px}"+
+  ".ppmRep .dn{font-weight:700;font-size:10pt;margin-bottom:2px}.ppmRep .ci{font-size:7.8pt;line-height:1.25;margin:1px 0;padding:1px 3px;border-left:2px solid #1F6FB2;background:#EEF4FA;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"+
+  ".ppmRep .ci.tk{border-left-color:#B4690E;background:#FBF3E8}.ppmRep .ci.cx{text-decoration:line-through;color:#777}.ppmRep .ci.more{border:0;background:none;color:#555}"+
+  ".ppmRep .pb{break-before:page;page-break-before:always}.ppmRep .rf{display:none}";
   document.head.appendChild(st);
   var page=document.createElement("style");document.head.appendChild(page);
-  function E(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
-  function t12(t){if(!/^\d{1,2}:\d{2}/.test(t||""))return t||"";var p=t.split(":"),h=+p[0];return (h%12||12)+":"+p[1]+" "+(h<12?"AM":"PM");}
-  function data(){try{return JSON.parse(localStorage.getItem(KEY)||"{}")||{};}catch(e){return {};}}
-  function cname(c){return c?(c.name||[c.first,c.last].filter(Boolean).join(" ")||c.email||""):"";}
-  function line(k,v){return v?'<div><span class="k">'+E(k)+':</span> '+E(v)+'</div>':"";}
+  var host=null,dayMode=null;
+  function setPage(land){page.textContent="@media print{@page{size:letter "+(land?"landscape":"portrait")+";margin:12mm 12mm 14mm;@bottom-left{content:'My Planner & Mail';font:8pt Arial;color:#666}@bottom-right{content:'Page ' counter(page) ' of ' counter(pages);font:8pt Arial;color:#666}}}";}
   function build(){
-    var D=data(),evs=D.events||[],tasks=D.tasks||[],cons=D.contacts||[];
-    var title=(document.getElementById("dayTitle")||{}).textContent||"";
-    var rows=[];
-    document.querySelectorAll("#dayList .it").forEach(function(it){
-      var when=(it.querySelector(".tm")||{}).innerText||"";
-      var tk=it.querySelector("[data-tdone]"),ed=it.querySelector("[data-evedit],[data-mailev]");
-      if(tk){var t=tasks.filter(function(x){return x.id===tk.getAttribute("data-tdone");})[0];
-        if(t){rows.push('<tr><td class="t">'+E(when||(t.time?t12(t.time):""))+'</td><td>Do List task</td><td><div class="ttl">'+E(t.text)+(t.done?" (done)":"")+'</div>'+line("Category",t.cat)+line("Priority",t.pri)+line("Status",t.done?"Done":"Not done yet")+line("Reminder",REM[String(t.remind)]&&String(t.remind)!=="-1"?REM[String(t.remind)]:"")+(t.notes?'<div class="nt"><span class="k">Notes:</span> '+E(t.notes)+'</div>':"")+'</td></tr>');return;}}
-      if(ed){var id=ed.getAttribute("data-evedit")||ed.getAttribute("data-mailev"),ev=evs.filter(function(x){return x.id===id;})[0];
-        if(ev){var tm=ev.allDay||!ev.time?"All day":t12(ev.time)+(ev.endTime?" – "+t12(ev.endTime):"");
-          var ppl=(ev.people||[]).map(function(p){return cname(cons.filter(function(c){return c.id===p;})[0]);}).filter(Boolean).concat(String(ev.extra||"").split(/[,;]\s*/).filter(Boolean));
-          rows.push('<tr><td class="t">'+E(tm)+'</td><td>'+E(ev.type||"Event")+'</td><td><div class="ttl">'+E(ev.title)+(ev.status&&ev.status!=="Scheduled"?" ("+E(ev.status)+")":"")+'</div>'+line("Where",ev.location)+line("Repeats",REP[ev.repeat]||"")+line("Reminder",String(ev.remind)!=="-1"?REM[String(ev.remind)]||"":"")+line("People",ppl.join(", "))+(ev.notes?'<div class="nt"><span class="k">Notes:</span> '+E(ev.notes)+'</div>':"")+'</td></tr>');return;}}
-      /* anything else on the day (e.g. a contact's birthday): print it as shown */
-      var bd=(it.querySelector(".bd")||it).cloneNode(true);bd.querySelectorAll("button,.mact,input").forEach(function(x){x.remove();});
-      rows.push('<tr><td class="t">'+E(when)+'</td><td></td><td>'+E(bd.innerText.trim())+'</td></tr>');
-    });
-    var n=new Date();
-    return '<div class="h"><b>My Planner &amp; Mail &mdash; Day</b><span>Printed '+E(n.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}))+' at '+E(n.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}))+'</span></div>'+
-      '<h2>'+E(title)+'</h2>'+(rows.length?'<table><thead><tr><th>Time</th><th>Kind</th><th>Details</th></tr></thead><tbody>'+rows.join("")+'</tbody></table>':'<div class="empty">Nothing on this day.</div>');
+    if(!host){host=document.createElement("div");host.className="ppmRep";document.body.appendChild(host);}
+    var v=document.querySelector(".view.on"),id=v?v.id.replace(/^v-/,""):"calendar";
+    if(dayMode){host.innerHTML=dayReport(dayMode);setPage(false);}
+    else{var f=R[id]||R.calendar;host.innerHTML=f();setPage(id==="calendar");}
+    document.body.classList.add("ppmRepOn");
   }
-  var sheet=null;
-  function printDay(){
-    if(!sheet){sheet=document.createElement("div");sheet.className="ppmDaySheet";document.body.appendChild(sheet);}
-    sheet.innerHTML=build();document.body.classList.add("ppmDayMode");
-    page.textContent="@media print{@page{size:portrait;margin:12mm}}";
-    window.print();
+  window.addEventListener("beforeprint",build);
+  window.addEventListener("afterprint",function(){document.body.classList.remove("ppmRepOn");dayMode=null;});
+  function printDay(ds){dayMode=ds;build();window.print();}
+  /* ---------- buttons ---------- */
+  var fs=$("fsBtn");
+  if(fs&&!$("printBtn")){var b=document.createElement("button");b.className="iconbtn";b.id="printBtn";b.type="button";b.title="Print or save as PDF a report of this page";b.innerHTML="&#128424; <span>Print / PDF</span>";b.onclick=function(){dayMode=null;window.print();};fs.parentNode.insertBefore(b,fs);}
+  var dh=$("dayAddEv");dh=dh&&dh.parentNode;
+  if(dh&&!$("dayPrint")){var pb=document.createElement("button");pb.className="ghost sm";pb.id="dayPrint";pb.type="button";pb.innerHTML="&#128424; Print this day";pb.title="Print only this day and everything on it";pb.onclick=function(){printDay(selDay());};dh.appendChild(pb);}
+  function selDay(){var c=document.querySelector("#calGrid .cell.sel");return c?c.getAttribute("data-d"):today();}
+  /* ---------- day window: clicking a day always shows that day ---------- */
+  var dlg=document.createElement("dialog");dlg.id="ppmDay";
+  var ds2=document.createElement("style");
+  ds2.textContent="#ppmDay{border:0;border-radius:12px;padding:0;width:min(560px,94vw);max-height:86vh;box-shadow:0 20px 60px rgba(0,0,0,.35)}#ppmDay::backdrop{background:rgba(14,37,61,.45)}"+
+    "#ppmDay .hd{background:#14324F;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px}#ppmDay .hd b{font-size:17px;flex:1}#ppmDay .hd button{background:none;border:0;color:#fff;font-size:22px;padding:0 4px}"+
+    "#ppmDay .bd{padding:12px 16px;overflow:auto;max-height:calc(86vh - 120px)}#ppmDay .row{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #E1E7ED}#ppmDay .row:last-child{border-bottom:0}"+
+    "#ppmDay .tm{width:92px;flex:0 0 92px;font-weight:700;color:#14324F;font-size:13px}#ppmDay .tt{font-weight:700}#ppmDay .mu{color:#5A6B7C;font-size:12.5px}#ppmDay .nt{white-space:pre-wrap;font-size:13px;margin-top:3px}"+
+    "#ppmDay .ft{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:1px solid #E1E7ED;background:#F7F9FB}#ppmDay .em{color:#5A6B7C;text-align:center;padding:18px}";
+  document.head.appendChild(ds2);document.body.appendChild(dlg);
+  function openDay(ds){
+    var D=data(),L=items(D,ds,ds);
+    dlg.innerHTML='<div class="hd"><b>'+E(fD(ds,true))+'</b><button type="button" data-x title="Close">&times;</button></div><div class="bd">'+(L.length?L.map(function(it){
+      if(it.kind==="task"){var t=it.task;return '<div class="row"><div class="tm">'+E(when(it)||"Do List")+'</div><div><div class="tt">'+(t.done?"&#9745; ":"&#9744; ")+E(t.text)+'</div><div class="mu">Do List'+(t.cat?" · "+E(t.cat):"")+(t.pri?" · "+E(t.pri)+" priority":"")+(t.done?" · Done":"")+'</div>'+(t.notes?'<div class="nt">'+E(t.notes)+'</div>':'')+'</div></div>';}
+      var ev=it.ev,ppl=people(D,ev);return '<div class="row"><div class="tm">'+E(when(it))+'</div><div><div class="tt">'+E(ev.title)+(ev.status&&ev.status!=="Scheduled"?" ("+E(ev.status)+")":"")+'</div><div class="mu">'+[ev.type,ev.location,REP[ev.repeat],REM[String(ev.remind)]?"Reminder "+REM[String(ev.remind)]:""].filter(Boolean).map(E).join(" · ")+'</div>'+(ppl?'<div class="mu">With: '+E(ppl)+'</div>':'')+(ev.notes?'<div class="nt">'+E(ev.notes)+'</div>':'')+'</div></div>';
+    }).join(""):'<div class="em">Nothing on this day yet.</div>')+'</div><div class="ft"><button type="button" class="primary sm" data-a="ev">+ Event</button><button type="button" class="ghost sm" data-a="task">+ Task</button><button type="button" class="ghost sm" data-a="mail">&#9993; Email this day</button><button type="button" class="ghost sm" data-a="print">&#128424; Print this day</button><span style="flex:1"></span><button type="button" class="ghost sm" data-x>Close</button></div>';
+    try{dlg.showModal();}catch(e){dlg.setAttribute("open","");}
   }
-  window.addEventListener("afterprint",function(){document.body.classList.remove("ppmDayMode");page.textContent="";});
-  function addBtn(){
-    var host=document.getElementById("dayAddEv");host=host&&host.parentNode;if(!host||document.getElementById("dayPrint"))return;
-    var b=document.createElement("button");b.className="ghost sm";b.id="dayPrint";b.type="button";b.innerHTML="&#128424; Print this day";b.title="Print only this day and everything on it";
-    b.onclick=printDay;host.appendChild(b);
+  dlg.addEventListener("click",function(e){
+    if(e.target===dlg||e.target.closest("[data-x]")){dlg.close();return;}
+    var a=e.target.closest("[data-a]");if(!a)return;var k=a.getAttribute("data-a"),ds=dlg.getAttribute("data-d");dlg.close();
+    if(k==="print"){printDay(ds);return;}
+    var btn=$({ev:"dayAddEv",task:"dayAddTask",mail:"dayEmail"}[k]);if(btn)btn.click();
+  });
+  /* one click = day window; two quick clicks on the same day = add an event that day (the calendar redraws
+     after the first click, so the browser's own double-click never arrived -- it is detected here instead) */
+  var grid=$("calGrid"),pend=null,last={d:"",t:0};
+  if(grid){
+    grid.addEventListener("click",function(e){var c=e.target.closest(".cell");if(!c||e.target.closest("a,button"))return;var ds=c.getAttribute("data-d"),now=Date.now();
+      clearTimeout(pend);
+      if(last.d===ds&&now-last.t<450){last={d:"",t:0};var add=$("calAddEv");if(add&&add.onclick)add.onclick();return;}
+      last={d:ds,t:now};
+      pend=setTimeout(function(){dlg.setAttribute("data-d",ds);openDay(ds);},330);});
   }
-  addBtn();
 })();
 </script>
 </body>
