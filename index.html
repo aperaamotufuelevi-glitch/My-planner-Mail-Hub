@@ -2050,6 +2050,7 @@ checkReminders();setInterval(checkReminders,30000);
   var head=null,tas=[];
   function prep(){
     undo();
+    if(document.body.classList.contains("ppmDayMode"))return;
     var v=document.querySelector(".view.on");if(!v)return;
     var title=(document.getElementById("topTitle")||{}).textContent||"";
     head=document.createElement("div");head.className="ppmPrintHead";
@@ -2067,6 +2068,64 @@ checkReminders();setInterval(checkReminders,30000);
   if(fs){var b=document.createElement("button");b.className="iconbtn";b.id="printBtn";b.type="button";b.title="Print this page";b.innerHTML="&#128424; <span>Print</span>";
     b.onclick=function(){prep();window.print();};
     fs.parentNode.insertBefore(b,fs);}
+})();
+</script>
+<script>/* (added) PRINT THIS DAY: on the Calendar, "Print this day" prints only the selected day and everything
+   on it -- every event and Do List task with all its details -- on its own page. */
+(function(){
+  var KEY="ppm_data_v1";
+  var REM={"-1":"No reminder","0":"At the time","10":"10 minutes before","30":"30 minutes before","60":"1 hour before","120":"2 hours before","1440":"1 day before","2880":"2 days before","10080":"1 week before"};
+  var REP={daily:"Every day",weekly:"Every week",monthly:"Every month",yearly:"Every year"};
+  var st=document.createElement("style");
+  st.textContent=".ppmDaySheet{display:none}"+
+    "@media print{body.ppmDayMode .shell{display:none!important}body.ppmDayMode .ppmDaySheet{display:block!important;color:#000;font:13px/1.45 system-ui,Arial,sans-serif}"+
+    ".ppmDaySheet .h{border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:12px}.ppmDaySheet .h b{font-size:18px;display:block}.ppmDaySheet .h span{font-size:12px}"+
+    ".ppmDaySheet h2{font-size:17px;margin:0 0 10px}.ppmDaySheet table{width:100%;border-collapse:collapse}.ppmDaySheet th,.ppmDaySheet td{border:1px solid #888;padding:6px 8px;text-align:left;vertical-align:top}"+
+    ".ppmDaySheet th{background:#e6e6e6;font-size:12px;text-transform:uppercase;letter-spacing:.03em}.ppmDaySheet td.t{white-space:nowrap;width:1%;font-weight:700}.ppmDaySheet .k{font-weight:700}"+
+    ".ppmDaySheet .ttl{font-weight:700;font-size:14px}.ppmDaySheet .nt{white-space:pre-wrap;margin-top:4px;color:#000}.ppmDaySheet tr{break-inside:avoid;page-break-inside:avoid}.ppmDaySheet .empty{border:1px solid #888;padding:14px;text-align:center}"+
+    "*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}";
+  document.head.appendChild(st);
+  var page=document.createElement("style");document.head.appendChild(page);
+  function E(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+  function t12(t){if(!/^\d{1,2}:\d{2}/.test(t||""))return t||"";var p=t.split(":"),h=+p[0];return (h%12||12)+":"+p[1]+" "+(h<12?"AM":"PM");}
+  function data(){try{return JSON.parse(localStorage.getItem(KEY)||"{}")||{};}catch(e){return {};}}
+  function cname(c){return c?(c.name||[c.first,c.last].filter(Boolean).join(" ")||c.email||""):"";}
+  function line(k,v){return v?'<div><span class="k">'+E(k)+':</span> '+E(v)+'</div>':"";}
+  function build(){
+    var D=data(),evs=D.events||[],tasks=D.tasks||[],cons=D.contacts||[];
+    var title=(document.getElementById("dayTitle")||{}).textContent||"";
+    var rows=[];
+    document.querySelectorAll("#dayList .it").forEach(function(it){
+      var when=(it.querySelector(".tm")||{}).innerText||"";
+      var tk=it.querySelector("[data-tdone]"),ed=it.querySelector("[data-evedit],[data-mailev]");
+      if(tk){var t=tasks.filter(function(x){return x.id===tk.getAttribute("data-tdone");})[0];
+        if(t){rows.push('<tr><td class="t">'+E(when||(t.time?t12(t.time):""))+'</td><td>Do List task</td><td><div class="ttl">'+E(t.text)+(t.done?" (done)":"")+'</div>'+line("Category",t.cat)+line("Priority",t.pri)+line("Status",t.done?"Done":"Not done yet")+line("Reminder",REM[String(t.remind)]&&String(t.remind)!=="-1"?REM[String(t.remind)]:"")+(t.notes?'<div class="nt"><span class="k">Notes:</span> '+E(t.notes)+'</div>':"")+'</td></tr>');return;}}
+      if(ed){var id=ed.getAttribute("data-evedit")||ed.getAttribute("data-mailev"),ev=evs.filter(function(x){return x.id===id;})[0];
+        if(ev){var tm=ev.allDay||!ev.time?"All day":t12(ev.time)+(ev.endTime?" – "+t12(ev.endTime):"");
+          var ppl=(ev.people||[]).map(function(p){return cname(cons.filter(function(c){return c.id===p;})[0]);}).filter(Boolean).concat(String(ev.extra||"").split(/[,;]\s*/).filter(Boolean));
+          rows.push('<tr><td class="t">'+E(tm)+'</td><td>'+E(ev.type||"Event")+'</td><td><div class="ttl">'+E(ev.title)+(ev.status&&ev.status!=="Scheduled"?" ("+E(ev.status)+")":"")+'</div>'+line("Where",ev.location)+line("Repeats",REP[ev.repeat]||"")+line("Reminder",String(ev.remind)!=="-1"?REM[String(ev.remind)]||"":"")+line("People",ppl.join(", "))+(ev.notes?'<div class="nt"><span class="k">Notes:</span> '+E(ev.notes)+'</div>':"")+'</td></tr>');return;}}
+      /* anything else on the day (e.g. a contact's birthday): print it as shown */
+      var bd=(it.querySelector(".bd")||it).cloneNode(true);bd.querySelectorAll("button,.mact,input").forEach(function(x){x.remove();});
+      rows.push('<tr><td class="t">'+E(when)+'</td><td></td><td>'+E(bd.innerText.trim())+'</td></tr>');
+    });
+    var n=new Date();
+    return '<div class="h"><b>My Planner &amp; Mail &mdash; Day</b><span>Printed '+E(n.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}))+' at '+E(n.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}))+'</span></div>'+
+      '<h2>'+E(title)+'</h2>'+(rows.length?'<table><thead><tr><th>Time</th><th>Kind</th><th>Details</th></tr></thead><tbody>'+rows.join("")+'</tbody></table>':'<div class="empty">Nothing on this day.</div>');
+  }
+  var sheet=null;
+  function printDay(){
+    if(!sheet){sheet=document.createElement("div");sheet.className="ppmDaySheet";document.body.appendChild(sheet);}
+    sheet.innerHTML=build();document.body.classList.add("ppmDayMode");
+    page.textContent="@media print{@page{size:portrait;margin:12mm}}";
+    window.print();
+  }
+  window.addEventListener("afterprint",function(){document.body.classList.remove("ppmDayMode");page.textContent="";});
+  function addBtn(){
+    var host=document.getElementById("dayAddEv");host=host&&host.parentNode;if(!host||document.getElementById("dayPrint"))return;
+    var b=document.createElement("button");b.className="ghost sm";b.id="dayPrint";b.type="button";b.innerHTML="&#128424; Print this day";b.title="Print only this day and everything on it";
+    b.onclick=printDay;host.appendChild(b);
+  }
+  addBtn();
 })();
 </script>
 </body>
