@@ -2022,5 +2022,52 @@ show("calendar");
 checkReminders();setInterval(checkReminders,30000);
 })();
 </script>
+<script>/* (added) PRINT: a Print button in the top bar prints the page you are on as a clean document --
+   heading with the page name and the date/time printed, no menu or buttons, typed-in text printed in
+   full, the calendar sideways (landscape) so the month fits. Ctrl+P / the browser's Print does the same. */
+(function(){
+  var st=document.createElement("style");
+  st.textContent=
+    ".ppmPrintHead{display:none}"+
+    "@media print{"+
+      "html,body{background:#fff!important}"+
+      ".side,.scrim,.top,.toast,#toasts,.toasts,dialog,.modal,.overlay{display:none!important}"+
+      ".shell,.main,.wrap{display:block!important;margin:0!important;padding:0!important;max-width:none!important;width:auto!important;height:auto!important;overflow:visible!important;box-shadow:none!important}"+
+      ".view{display:none!important}.view.on{display:block!important}"+
+      "button,.btns,.seg,.iconbtn,.sidebtn,input[type=file],input[type=button],input[type=submit]{display:none!important}"+
+      ".ppmPrintHead{display:block!important;border-bottom:2px solid #000;margin:0 0 12px;padding:0 0 6px;color:#000}"+
+      ".ppmPrintHead b{font-size:18px;display:block}.ppmPrintHead span{font-size:12px}"+
+      ".card{box-shadow:none!important;break-inside:avoid;page-break-inside:avoid;border:1px solid #999!important}"+
+      "input,select,textarea{border:0!important;border-bottom:1px solid #999!important;background:none!important;box-shadow:none!important;color:#000!important;-webkit-appearance:none;appearance:none}"+
+      "textarea{display:none!important}.ppmTa{display:block!important;white-space:pre-wrap;word-wrap:break-word;border-bottom:1px solid #999;padding:2px 0;min-height:1em}"+
+      "a{color:#000!important;text-decoration:none!important}"+
+      "*{-webkit-print-color-adjust:exact;print-color-adjust:exact}"+
+      ".calwrap{display:block!important}.calgrid{break-inside:auto}"+
+    "}"+
+    ".ppmTa{display:none}";
+  document.head.appendChild(st);
+  var page=document.createElement("style");document.head.appendChild(page);
+  var head=null,tas=[];
+  function prep(){
+    undo();
+    var v=document.querySelector(".view.on");if(!v)return;
+    var title=(document.getElementById("topTitle")||{}).textContent||"";
+    head=document.createElement("div");head.className="ppmPrintHead";
+    var n=new Date();
+    head.innerHTML="<b>My Planner &amp; Mail &mdash; "+title.replace(/[<>&]/g,"")+"</b><span>Printed "+n.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"})+" at "+n.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})+"</span>";
+    v.insertBefore(head,v.firstChild);
+    /* show the whole text typed in boxes (a box only shows part of it on paper) */
+    v.querySelectorAll("textarea").forEach(function(t){if(!t.offsetParent&&!t.value)return;var d=document.createElement("div");d.className="ppmTa";d.textContent=t.value;t.parentNode.insertBefore(d,t.nextSibling);tas.push(d);});
+    page.textContent="@media print{@page{size:"+(v.id==="v-calendar"?"landscape":"portrait")+";margin:12mm}}";
+  }
+  function undo(){if(head&&head.parentNode)head.parentNode.removeChild(head);head=null;tas.forEach(function(d){if(d.parentNode)d.parentNode.removeChild(d)});tas=[];}
+  window.addEventListener("beforeprint",prep);
+  window.addEventListener("afterprint",undo);
+  var fs=document.getElementById("fsBtn");
+  if(fs){var b=document.createElement("button");b.className="iconbtn";b.id="printBtn";b.type="button";b.title="Print this page";b.innerHTML="&#128424; <span>Print</span>";
+    b.onclick=function(){prep();window.print();};
+    fs.parentNode.insertBefore(b,fs);}
+})();
+</script>
 </body>
 </html>
