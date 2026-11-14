@@ -189,6 +189,7 @@ body.menu-open:not(.pinned) .scrim{display:block}
         <button class="ghost" id="calToday">Today</button>
         <span class="seg"><button id="calMonth" class="on">Month</button><button id="calWeek">Week</button></span>
         <span style="flex:1"></span>
+        <button class="ghost" id="calHealth" title="Open MyHealthChart">&#10084; MyHealthChart</button>
         <button class="ghost" id="calPanel">Hide day panel</button>
         <button class="primary" id="calAddEv">+ Event / Appointment</button>
       </div>
@@ -480,6 +481,13 @@ body.menu-open:not(.pinned) .scrim{display:block}
     </div>
     <div>
       <div class="card">
+        <h3>MyHealthChart</h3>
+        <div class="btns"><button class="hlink-btn primary" id="hlBtn">&#128279; Connect</button><button class="ghost sm" id="hlOpen">Open MyHealthChart</button></div>
+        <div class="note" style="margin:6px 0">Nothing is shared until you press Connect. While connected, MyHealthChart's appointments, ride pickup windows, refill dates and next steps show on your Calendar and Do List (marked &ldquo;From MyHealthChart&rdquo;), and MyHealthChart can email records using your contacts and email setup here. Choose what it sends in MyHealthChart &rarr; Settings.</div>
+        <div id="hlStatus"></div>
+        <div class="field" style="margin-top:8px"><label class="l">MyHealthChart address (file name on your Cloud Hub)</label><input type="text" id="hlUrl" placeholder="Unified-Health-Transportation-Management-System.html"></div>
+      </div>
+      <div class="card">
         <h3>Lists used in the drop-downs</h3>
         <div class="field"><label class="l">Event types (one per line)</label><textarea id="sTypes"></textarea></div>
         <div class="field"><label class="l">Do List categories</label><textarea id="sCats"></textarea></div>
@@ -587,11 +595,80 @@ function bdayEvents(){
     return {id:"bd_"+c.id,title:"Birthday: "+c.name,type:"Birthday",date:c.bday,allDay:true,repeat:"yearly",remind:"-1",status:"Scheduled",fromContact:true,contactId:c.id};
   });
 }
-function allEvents(){return D.events.concat(bdayEvents());}
+/* ============ LINK WITH MyHealthChart (added) ============
+   Read-only feed: MyHealthChart writes what it is sending to ONE shared record
+   (health_planner_link_v1) only while you are connected. This Planner shows those
+   items on the Calendar and Do List marked "From MyHealthChart" but never stores
+   them in its own data. Ticking a health task done is written to a separate small
+   record (health_planner_link_ack_v1) that MyHealthChart reads. Disconnect (here or
+   in MyHealthChart) empties the shared record, so the items disappear. */
+var HLINK="health_planner_link_v1",HACK="health_planner_link_ack_v1",hArmed=false,hArmT=null;
+function hRead(k){try{return JSON.parse(localStorage.getItem(k)||"null");}catch(e){return null;}}
+function hLink(){var o=hRead(HLINK);return o&&o.connected===true?o:null;}
+function hAck(){var a=hRead(HACK);if(!a||typeof a!=="object")a={};if(!a.done||typeof a.done!=="object")a.done={};return a;}
+function healthEvents(){
+  var l=hLink();if(!l||!Array.isArray(l.events))return [];
+  return l.events.map(function(e){return {id:e.id,title:e.title,type:e.type||"Appointment",date:e.date,time:e.time||"",endTime:e.endTime||"",allDay:!e.time,repeat:"none",
+    remind:D.settings.defRemind,status:e.status||"Scheduled",location:e.location||"",notes:e.notes||"",fromHealth:true};});
+}
+function healthTasks(){
+  var l=hLink();if(!l||!Array.isArray(l.tasks))return [];var a=hAck();
+  return l.tasks.map(function(t){return {id:t.id,text:t.text,cat:t.cat||"From MyHealthChart",pri:t.pri||"Normal",due:t.due||"",time:t.time||"",
+    remind:t.due?D.settings.defRemind:"-1",done:!!a.done[t.id],notes:t.notes||"",fromHealth:true,kind:t.kind||""};});
+}
+function hHref(){var u=String(D.settings.healthUrl||"").trim();return u||"Unified-Health-Transportation-Management-System.html";}
+function hOpen(){window.open(hHref(),"_blank","noopener");}
+function hConnect(){
+  var o={connected:true,connectedAt:new Date().toISOString(),updatedAt:new Date().toISOString(),from:"My Planner & Mail",events:[],tasks:[]};
+  try{localStorage.setItem(HLINK,JSON.stringify(o));}catch(e){}
+  toast("Connected. Open MyHealthChart once so it can send its appointments, refills and next steps.","good",7000);hRender();
+}
+function hDisconnect(){
+  try{localStorage.setItem(HLINK,JSON.stringify({connected:false,disconnectedAt:new Date().toISOString(),events:[],tasks:[]}));localStorage.removeItem(HACK);}catch(e){}
+  toast("Disconnected. MyHealthChart items were removed from this Planner.","good");hRender();
+}
+function hPaint(){
+  document.querySelectorAll(".hlink-btn").forEach(function(b){
+    var on=!!hLink();
+    if(!on){b.innerHTML="&#128279; Connect";b.className="hlink-btn primary";return;}
+    if(hArmed){b.innerHTML="&#10006; Disconnect";b.className="hlink-btn danger";return;}
+    b.innerHTML="&#10004; Connected";b.className="hlink-btn";b.style.cssText="background:var(--green);border-color:var(--green);color:#fff";
+  });
+  document.querySelectorAll(".hlink-btn.primary,.hlink-btn.danger").forEach(function(b){b.style.cssText="";});
+}
+function hArm(on){hArmed=!!on;clearTimeout(hArmT);if(on)hArmT=setTimeout(function(){hArmed=false;hPaint();},4000);hPaint();}
+function hClick(){if(!hLink()){hConnect();return;}if(!hArmed){hArm(true);return;}hArmed=false;hDisconnect();}
+function hRender(){
+  hPaint();
+  var box=$("hlStatus");if(!box)return;
+  if($("hlUrl")&&document.activeElement!==$("hlUrl"))$("hlUrl").value=D.settings.healthUrl||"";
+  var l=hLink();
+  if(!l){box.innerHTML='<div class="note">Not connected &mdash; nothing from MyHealthChart is shown here.</div>';}
+  else{
+    var ev=healthEvents(),tk=healthTasks();
+    var rows=ev.map(function(e){return [e.title,fmtD(e.date)+(e.time?" "+fmtT(e.time):"")];}).concat(tk.map(function(t){return [t.text+(t.done?" (done)":""),t.due?fmtD(t.due)+(t.time?" "+fmtT(t.time):""):"No due date"];}));
+    box.innerHTML='<div class="note" style="color:var(--green);font-weight:700">Connected since '+esc(new Date(l.connectedAt).toLocaleString())+(l.updatedAt?" &middot; last update "+esc(new Date(l.updatedAt).toLocaleString()):"")+'</div>'+
+      '<div class="note" style="margin:4px 0">Received from MyHealthChart: '+ev.length+' calendar item(s), '+tk.length+' Do List item(s).</div>'+
+      (rows.length?'<div class="tw" style="max-height:220px;overflow:auto"><table class="t"><tbody>'+rows.map(function(r){return '<tr><td>'+esc(r[0])+'</td><td class="note" style="white-space:nowrap">'+esc(r[1])+'</td></tr>';}).join("")+'</tbody></table></div>':"");
+  }
+}
+function healthTaskRow(x){
+  var t=today(),od=!x.done&&x.due&&(x.due<t||(x.due===t&&x.time&&dtOf(x.due,x.time)<new Date()));
+  return '<tr class="'+(x.done?"task-done":"")+'"><td><input type="checkbox" style="width:auto" data-tdone="'+esc(x.id)+'"'+(x.done?" checked":"")+'></td><td><span class="ttl">'+esc(x.text)+'</span>'+(x.notes?'<div class="note">'+esc(x.notes)+'</div>':"")+'</td><td><span class="pill">From MyHealthChart</span></td><td><span class="pill amber">Normal</span></td><td'+(od?' class="over"':"")+'>'+(x.due?esc(fmtD(x.due))+(x.time?"<br>"+esc(fmtT(x.time)):""):"&mdash;")+'</td><td class="note">'+(x.due?esc(remindLabel(x.remind)):"")+'</td><td colspan="2" class="note">Change it in MyHealthChart</td></tr>';
+}
+document.addEventListener("change",function(e){
+  var id=e.target.getAttribute&&e.target.getAttribute("data-tdone");if(!id||id.indexOf("hc_")!==0)return;
+  var a=hAck();if(e.target.checked)a.done[id]=Date.now();else delete a.done[id];
+  try{localStorage.setItem(HACK,JSON.stringify(a));}catch(err){}
+  if(id.indexOf("hc_step_")===0&&e.target.checked)toast("Marked done. MyHealthChart will mark this next step done the next time it is open.","good");
+  renderMenu();if(cur==="calendar")renderCalendar();else if(cur==="todo")renderTodo();
+});
+window.addEventListener("storage",function(e){if(e.key!==HLINK&&e.key!==HACK)return;hRender();if(["calendar","todo"].indexOf(cur)>=0)show(cur);});
+function allEvents(){return D.events.concat(bdayEvents(),healthEvents());}
 function itemsBetween(from,to){
   var out=[];
   allEvents().forEach(function(ev){occ(ev,from,to).forEach(function(d){out.push({kind:"ev",ev:ev,date:d,time:ev.allDay?"":(ev.time||"")});});});
-  D.tasks.forEach(function(t){if(t.due&&t.due>=from&&t.due<=to)out.push({kind:"task",task:t,date:t.due,time:t.time||""});});
+  D.tasks.concat(healthTasks()).forEach(function(t){if(t.due&&t.due>=from&&t.due<=to)out.push({kind:"task",task:t,date:t.due,time:t.time||""});});
   out.sort(function(a,b){return (a.date+(a.time||"00:00")).localeCompare(b.date+(b.time||"00:00"));});
   return out;
 }
@@ -688,7 +765,7 @@ function itemHtml(it,showDate){
   }
   var ev=it.ev;
   var st=ev.status==="Completed"?' <span class="pill green">Completed</span>':ev.status==="Cancelled"?' <span class="pill red">Cancelled</span>':"";
-  return '<div class="it"><div class="tm">'+when+'</div><div class="bd"><div class="tt"><span class="dot" style="background:'+colorFor(ev.type)+'"></span>'+esc(ev.title)+st+'</div><div class="note">'+esc(ev.type||"")+(ev.endTime&&!ev.allDay?" · until "+fmtT(ev.endTime):"")+(ev.location?" · "+esc(ev.location):"")+'</div>'+(ev.fromContact?"":'<div class="mact"><button class="ghost sm" data-evedit="'+ev.id+'">Edit</button><button class="ghost sm" data-mailev="'+ev.id+'" data-d="'+it.date+'">&#9993; Email</button></div>')+'</div></div>';
+  return '<div class="it"><div class="tm">'+when+'</div><div class="bd"><div class="tt"><span class="dot" style="background:'+colorFor(ev.type)+'"></span>'+esc(ev.title)+st+'</div><div class="note">'+esc(ev.type||"")+(ev.endTime&&!ev.allDay?" · until "+fmtT(ev.endTime):"")+(ev.location?" · "+esc(ev.location):"")+'</div>'+((ev.fromContact||ev.fromHealth)?(ev.fromHealth?'<div class="note">From MyHealthChart &middot; change it there</div>':""):'<div class="mact"><button class="ghost sm" data-evedit="'+ev.id+'">Edit</button><button class="ghost sm" data-mailev="'+ev.id+'" data-d="'+it.date+'">&#9993; Email</button></div>')+'</div></div>';
 }
 var UI={pin:false,panel:true,view:"month"};
 try{Object.assign(UI,JSON.parse(localStorage.getItem("ppm_ui")||"{}"));}catch(e){}
@@ -882,7 +959,7 @@ function renderTodo(){
   $("tdFCat").innerHTML=optList(D.settings.taskCats,$("tdFCat").value,"All categories");
   if(!$("tdRemind").options.length)$("tdRemind").innerHTML=remindOpts("-1");
   var q=$("tdSearch").value.trim().toLowerCase(),fs=$("tdFStatus").value,fc=$("tdFCat").value,so=$("tdSort").value,t=today();
-  var arr=D.tasks.filter(function(x){
+  var arr=D.tasks.concat(healthTasks()).filter(function(x){
     if(fs==="open"&&x.done)return false;if(fs==="done"&&!x.done)return false;
     if(fc&&x.cat!==fc)return false;
     if(q&&(x.text+" "+(x.cat||"")+" "+(x.notes||"")).toLowerCase().indexOf(q)<0)return false;return true;
@@ -895,6 +972,7 @@ function renderTodo(){
   });
   if(!arr.length){$("tdBody").innerHTML='<tr><td colspan="8"><div class="empty">'+(D.tasks.length?"No tasks match.":"No tasks yet. Type some above, one per line.")+'</div></td></tr>';return;}
   $("tdBody").innerHTML=arr.map(function(x){
+    if(x.fromHealth)return healthTaskRow(x);
     if(x.id===tdEditId){
       return '<tr data-row="'+x.id+'"><td></td><td><input type="text" data-e="text" value="'+esc(x.text)+'"><textarea data-e="notes" style="min-height:40px;margin-top:4px" placeholder="Notes">'+esc(x.notes||"")+'</textarea></td><td><select data-e="cat">'+optList(D.settings.taskCats.indexOf(x.cat)<0&&x.cat?D.settings.taskCats.concat([x.cat]):D.settings.taskCats,x.cat)+'</select></td><td><select data-e="pri">'+optList(["Normal","High","Low"],x.pri||"Normal")+'</select></td><td><input type="date" data-e="due" value="'+esc(x.due||"")+'"></td><td><input type="time" data-e="time" value="'+esc(x.time||"")+'"></td><td><select data-e="remind">'+remindOpts(x.remind==null?"-1":x.remind)+'</select></td><td style="white-space:nowrap"><button class="primary sm" data-tsave="'+x.id+'">Save</button> <button class="ghost sm" data-tcancel="1">Cancel</button></td></tr>';
     }
@@ -1909,6 +1987,7 @@ $("exToChat").onclick=function(){if(!exFiles.length){toast("Add files first.");r
 var TPL='<div style="display:{{html_display}}">{{{message_html}}}</div>\n<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;white-space:pre-line;display:{{text_display}}">{{message}}</div>';
 function lines(v){var seen={};return String(v||"").split(/\r?\n/).map(function(s){return s.trim();}).filter(function(s){if(!s||seen[s.toLowerCase()])return false;seen[s.toLowerCase()]=1;return true;});}
 function renderSettings(){
+  try{hRender();}catch(e){}
   var s=D.settings;
   $("sName").value=s.myName;$("sEmail").value=s.myEmail;$("sSig").value=s.signature;
   var k="";try{k=localStorage.getItem(APIKEY)||"";}catch(e){}
@@ -2000,7 +2079,7 @@ function checkReminders(){
       if(now>=at&&now<new Date(+start+12*3600000)&&!D.notified[k]){D.notified[k]=Date.now();changed=true;fire("ev",ev,d,start,+at<pageStart-60000);}
     });
   });
-  D.tasks.forEach(function(x){
+  D.tasks.concat(healthTasks()).forEach(function(x){
     if(x.done||!x.due||x.remind==null||String(x.remind)==="-1"||x.due<from)return;
     var start=dtOf(x.due,x.time||"09:00"),at=new Date(start-(+x.remind)*60000),k=x.id+"|"+x.due+"|"+x.remind;
     if(now>=at&&now<new Date(+start+12*3600000)&&!D.notified[k]){D.notified[k]=Date.now();changed=true;fire("task",x,x.due,start,+at<pageStart-60000);}
@@ -2015,6 +2094,10 @@ window.addEventListener("storage",function(e){
   if(["calendar","todo","contacts"].indexOf(cur)>=0)show(cur);
 });
 load();getKey();libLoad();
+$("hlBtn").onclick=hClick;$("hlBtn").onmouseenter=function(){if(hLink())hArm(true);};$("hlBtn").onmouseleave=function(){hArm(false);};
+$("hlOpen").onclick=hOpen;$("calHealth").onclick=hOpen;
+$("hlUrl").onchange=function(){D.settings.healthUrl=this.value.trim();save();};
+setInterval(function(){hPaint();if(cur==="settings")hRender();},15000);
 document.querySelector("#v-email .note").innerHTML="Each person gets their own email. In the subject or message, <code>{name}</code> puts each person&rsquo;s saved full name, <code>{first}</code> the first name, and <code>{formal}</code> their saved title and last name (for example Mrs. Smith; only if you saved a title).";
 applyPin();if(UI.pin&&wide())document.body.classList.add("menu-open");fsLabel();
 tickClock();setInterval(tickClock,15000);
@@ -2040,7 +2123,13 @@ checkReminders();setInterval(checkReminders,30000);
   /* ---------- helpers ---------- */
   function $(id){return document.getElementById(id);}
   function E(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
-  function data(){var D;try{D=JSON.parse(localStorage.getItem(KEY)||"{}")||{};}catch(e){D={};}["events","tasks","contacts","sent","chat"].forEach(function(k){if(!Array.isArray(D[k]))D[k]=[];});D.settings=D.settings||{};return D;}
+  function data(){var D;try{D=JSON.parse(localStorage.getItem(KEY)||"{}")||{};}catch(e){D={};}["events","tasks","contacts","sent","chat"].forEach(function(k){if(!Array.isArray(D[k]))D[k]=[];});D.settings=D.settings||{};
+    /* (added) include MyHealthChart items in printouts while connected - a read-only copy, never saved */
+    var HL=null;try{HL=JSON.parse(localStorage.getItem("health_planner_link_v1")||"null");}catch(e){}
+    if(HL&&HL.connected===true){var HA={};try{HA=(JSON.parse(localStorage.getItem("health_planner_link_ack_v1")||"{}")||{}).done||{};}catch(e){}
+      D.events=D.events.concat((HL.events||[]).map(function(e){return {id:e.id,title:e.title,type:e.type||"Appointment",date:e.date,time:e.time||"",endTime:e.endTime||"",allDay:!e.time,repeat:"none",status:e.status||"Scheduled",location:e.location||"",notes:e.notes||""};}));
+      D.tasks=D.tasks.concat((HL.tasks||[]).map(function(t){return {id:t.id,text:t.text,cat:t.cat||"From MyHealthChart",pri:"Normal",due:t.due||"",time:t.time||"",done:!!HA[t.id],notes:t.notes||""};}));}
+    return D;}
   function pad(n){return (n<10?"0":"")+n;}
   function iso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
   function parse(s){if(!s)return null;var p=String(s).split("-");if(p.length<3)return null;var d=new Date(+p[0],+p[1]-1,+p[2]);return isNaN(d)?null:d;}
