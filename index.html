@@ -2383,5 +2383,244 @@ checkReminders();setInterval(checkReminders,30000);
   }
 })();
 </script>
+<script>/* (added) EMAIL: INBOX + OUTGOING
+   - The Email tab gets two parts: "Inbox" (emails you received, saved here) and "Outgoing" (the
+     existing Send email box and Sent list, unchanged).
+   - Each saved email is its own record (localStorage key ppm_mail_<id>), so it syncs to every
+     device through My Cloud Server without touching the planner's main data (ppm_data_v1).
+   - Emails reach the Inbox by: Claude loading them for you, or "Add emails" (.eml / .txt files,
+     or pasted text). Reply opens Outgoing with the address and subject filled in. */
+(function(){
+  var PFX="ppm_mail_";
+  function $(id){return document.getElementById(id);}
+  function E(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+  function rid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+  function msg(t,k){try{toast(t,k);}catch(e){}}
+  function all(){
+    var out=[];
+    try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.indexOf(PFX)===0){try{var m=JSON.parse(localStorage.getItem(k)||"null");if(m&&m.id)out.push(m);}catch(e){}}}}catch(e){}
+    out.sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
+    return out;
+  }
+  function put(m){try{localStorage.setItem(PFX+m.id,JSON.stringify(m));return true;}catch(e){msg("This device is out of storage space.","bad");return false;}}
+  function del(id){try{localStorage.removeItem(PFX+id);}catch(e){}}
+  function when(d){var t=new Date(d);return isNaN(t)?String(d||""):t.toLocaleString([], {month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});}
+  function short(d){var t=new Date(d);if(isNaN(t))return "";var n=new Date();return t.toDateString()===n.toDateString()?t.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):t.toLocaleDateString([], {month:"short",day:"numeric",year:t.getFullYear()===n.getFullYear()?undefined:"numeric"});}
+
+  /* ---------- styles ---------- */
+  var st=document.createElement("style");
+  st.textContent=
+    "#emSubBar{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}"+
+    "#emSubBar button{padding:9px 16px;font-size:14.5px}#emSubBar button.on{background:var(--navy);color:#fff}"+
+    "#emSubBar .cnt{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:10px;background:var(--red);color:#fff;font-size:12px;line-height:19px;text-align:center}"+
+    ".ibTools{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}.ibTools .field{margin:0}"+
+    ".ibRow{display:flex;gap:10px;align-items:flex-start;padding:11px 6px;border-bottom:1px solid var(--line);cursor:pointer}"+
+    ".ibRow:hover{background:var(--tint)}.ibRow.unread .ibSubj,.ibRow.unread .ibFrom{font-weight:800;color:var(--navy)}"+
+    ".ibDot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:0 0 9px}.ibRow.unread .ibDot{background:var(--blue)}"+
+    ".ibMain{flex:1;min-width:0}.ibTop{display:flex;gap:8px;justify-content:space-between}"+
+    ".ibFrom{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ibDate{font-size:12.5px;color:var(--soft);white-space:nowrap}"+
+    ".ibSubj{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}"+
+    ".ibSnip{font-size:12.5px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"+
+    ".ibTag{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:0 5px;margin-right:5px;background:var(--tint);color:var(--navy)}"+
+    ".ibTag.me{background:#EEF7EE;color:var(--green)}"+
+    "#ibRead .hd{border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px}"+
+    "#ibRead h2{font-size:19px;margin:0 0 8px;color:var(--navy);overflow-wrap:anywhere}"+
+    "#ibRead .meta{font-size:13px;color:var(--soft);line-height:1.6;overflow-wrap:anywhere}"+
+    "#ibRead .bd{white-space:pre-wrap;font-size:14.5px;line-height:1.55;overflow-wrap:anywhere}"+
+    "#ibRead .att{margin-top:12px;font-size:13px;color:var(--soft)}"+
+    "#ibAdd textarea{min-height:160px;font-family:monospace;font-size:12.5px}";
+  document.head.appendChild(st);
+
+  /* ---------- build the two parts inside the Email tab (existing boxes are moved, not changed) ---------- */
+  var view=$("v-email");if(!view)return;
+  var outWrap=document.createElement("div");outWrap.id="emOutWrap";
+  var kids=Array.prototype.slice.call(view.children).filter(function(n){return !(n.tagName==="H1"||n.classList.contains("sub"));});
+  kids.forEach(function(n){outWrap.appendChild(n);});
+  var bar=document.createElement("div");bar.id="emSubBar";
+  bar.innerHTML='<button id="emTabIn">&#128229; Inbox<span class="cnt" id="ibCnt" style="display:none"></span></button><button id="emTabOut">&#128228; Outgoing</button>';
+  var inWrap=document.createElement("div");inWrap.id="emInWrap";
+  inWrap.innerHTML=
+   '<div class="card" id="ibListCard">'+
+     '<div class="ibTools">'+
+       '<div class="field" style="flex:2 1 200px"><label class="l">Search</label><input type="text" id="ibSearch" placeholder="Search name, subject or words…"></div>'+
+       '<div class="field" style="flex:1 1 130px"><label class="l">Label</label><select id="ibLabel"></select></div>'+
+       '<div class="field" style="flex:1 1 130px"><label class="l">Show</label><select id="ibShow"><option value="all">Everything</option><option value="in">Received</option><option value="out">Sent by me</option><option value="unread">Unread only</option></select></div>'+
+       '<button class="ghost" id="ibAddBtn">&#10133; Add emails</button>'+
+     '</div>'+
+     '<div class="note" id="ibCount" style="margin:8px 0 2px"></div>'+
+     '<div id="ibList"></div>'+
+   '</div>'+
+   '<div class="card" id="ibRead" style="display:none"></div>'+
+   '<div class="card" id="ibAdd" style="display:none">'+
+     '<h3>&#10133; Add emails to the Inbox</h3>'+
+     '<div class="note" style="margin-bottom:10px">Pick saved email files (.eml, .txt), or paste an email below. In Gmail: open the email, tap &#8942; &rarr; Download message (.eml).</div>'+
+     '<div class="field"><label class="l">Email files</label><input type="file" id="ibFiles" multiple accept=".eml,.txt,message/rfc822,text/plain"></div>'+
+     '<div class="field"><label class="l">Or paste an email</label><textarea id="ibPaste" placeholder="From: …&#10;Date: …&#10;Subject: …&#10;&#10;Message"></textarea></div>'+
+     '<div class="field"><label class="l">Label</label><input type="text" id="ibNewLabel" list="ibLabelList" placeholder="For example: Lawyer"><datalist id="ibLabelList"></datalist></div>'+
+     '<div class="btns"><button class="primary" id="ibAddGo">Add to Inbox</button><button class="ghost" id="ibAddClose">Close</button><span class="note" id="ibAddMsg"></span></div>'+
+   '</div>';
+  var sub=view.querySelector(".sub");
+  (sub||view.firstChild).insertAdjacentElement("afterend",bar);
+  bar.insertAdjacentElement("afterend",inWrap);
+  inWrap.insertAdjacentElement("afterend",outWrap);
+  if(sub)sub.textContent="Inbox: emails you received. Outgoing: send to saved contacts and to any address, with AI writing and HTML design.";
+
+  var part="in",openId=null;
+  function setPart(p){
+    part=p;$("emTabIn").classList.toggle("on",p==="in");$("emTabOut").classList.toggle("on",p==="out");
+    inWrap.style.display=p==="in"?"":"none";outWrap.style.display=p==="out"?"":"none";
+    if(p==="in")paint();
+  }
+  $("emTabIn").onclick=function(){setPart("in");if(openId)closeMail();};
+  $("emTabOut").onclick=function(){setPart("out");};
+
+  /* ---------- list ---------- */
+  function labels(L){var s={};L.forEach(function(m){if(m.label)s[m.label]=1;});return Object.keys(s).sort();}
+  function badge(L){
+    var n=(L||all()).filter(function(m){return m.dir!=="out"&&!m.read;}).length;
+    var c=$("ibCnt");if(c){c.textContent=n;c.style.display=n?"":"none";}
+  }
+  function paint(){
+    var L=all();badge(L);
+    var ls=labels(L),cur=$("ibLabel").value;
+    $("ibLabel").innerHTML='<option value="">All labels</option>'+ls.map(function(x){return '<option'+(x===cur?" selected":"")+'>'+E(x)+'</option>';}).join("");
+    $("ibLabelList").innerHTML=ls.map(function(x){return '<option value="'+E(x)+'">';}).join("");
+    var q=$("ibSearch").value.trim().toLowerCase(),lab=$("ibLabel").value,sh=$("ibShow").value;
+    var A=L.filter(function(m){
+      if(lab&&m.label!==lab)return false;
+      if(sh==="in"&&m.dir==="out")return false;if(sh==="out"&&m.dir!=="out")return false;if(sh==="unread"&&(m.read||m.dir==="out"))return false;
+      return !q||[m.fromName,m.from,(m.to||[]).join(" "),m.subject,m.body].join(" ").toLowerCase().indexOf(q)>=0;
+    });
+    $("ibCount").textContent=L.length?(A.length+" of "+L.length+" emails"):"";
+    if(!A.length){$("ibList").innerHTML='<div class="empty">'+(L.length?"Nothing matches.":"No emails in the Inbox yet. Tap “Add emails”, or ask Claude to load emails here.")+'</div>';return;}
+    $("ibList").innerHTML=A.slice(0,500).map(function(m){
+      var who=m.dir==="out"?("To: "+((m.toNames&&m.toNames[0])||(m.to||[])[0]||"")):(m.fromName||m.from||"");
+      var snip=String(m.body||"").replace(/\s+/g," ").slice(0,140);
+      return '<div class="ibRow'+(m.dir!=="out"&&!m.read?" unread":"")+'" data-ib="'+E(m.id)+'"><span class="ibDot"></span><div class="ibMain">'+
+        '<div class="ibTop"><span class="ibFrom">'+E(who)+'</span><span class="ibDate">'+E(short(m.date))+'</span></div>'+
+        '<div class="ibSubj">'+(m.dir==="out"?'<span class="ibTag me">Sent by me</span>':"")+(m.label?'<span class="ibTag">'+E(m.label)+'</span>':"")+E(m.subject||"(no subject)")+'</div>'+
+        '<div class="ibSnip">'+E(snip)+'</div></div></div>';
+    }).join("");
+  }
+  ["ibSearch"].forEach(function(id){$(id).oninput=paint;});
+  ["ibLabel","ibShow"].forEach(function(id){$(id).onchange=paint;});
+  $("ibList").addEventListener("click",function(e){var r=e.target.closest("[data-ib]");if(r)openMail(r.getAttribute("data-ib"));});
+
+  /* ---------- reader ---------- */
+  function get(id){try{return JSON.parse(localStorage.getItem(PFX+id)||"null");}catch(e){return null;}}
+  function openMail(id){
+    var m=get(id);if(!m)return;
+    if(m.dir!=="out"&&!m.read){m.read=true;put(m);}
+    openId=id;
+    var R=$("ibRead");
+    R.innerHTML='<div class="btns" style="margin-bottom:12px"><button class="ghost" id="ibBack">&larr; Back to Inbox</button>'+
+      (m.dir!=="out"&&m.from?'<button class="primary" id="ibReply">&#8617;&#65039; Reply</button>':"")+
+      '<button class="ghost" id="ibFwd">&#10145;&#65039; Forward</button>'+
+      (m.gmail?'<a class="ghost" style="display:inline-block;border:1px solid var(--line);border-radius:6px;padding:7px 13px;font-weight:600;font-size:13.5px;color:var(--soft);text-decoration:none" href="'+E(m.gmail)+'" target="_blank" rel="noopener">Open in Gmail</a>':"")+
+      (m.dir!=="out"?'<button class="ghost" id="ibUnread">Mark unread</button>':"")+
+      '<button class="danger" id="ibDel">Delete</button></div>'+
+      '<div class="hd"><h2>'+E(m.subject||"(no subject)")+'</h2><div class="meta">'+
+        '<b>From:</b> '+E((m.fromName?m.fromName+" ":"")+(m.from?"<"+m.from+">":""))+'<br>'+
+        ((m.to&&m.to.length)?'<b>To:</b> '+E(m.to.join(", "))+'<br>':"")+
+        ((m.cc&&m.cc.length)?'<b>Cc:</b> '+E(m.cc.join(", "))+'<br>':"")+
+        '<b>Date:</b> '+E(when(m.date))+(m.label?' &nbsp;·&nbsp; <b>Label:</b> '+E(m.label):"")+'</div></div>'+
+      '<div class="bd">'+E(m.body||"")+'</div>'+
+      ((m.attachments&&m.attachments.length)?'<div class="att">&#128206; Attachments (open in Gmail): '+E(m.attachments.join(", "))+'</div>':"")+
+      (m.trimmed?'<div class="att">'+E(m.trimmed)+'</div>':"");
+    $("ibListCard").style.display="none";$("ibAdd").style.display="none";R.style.display="";
+    $("ibBack").onclick=closeMail;
+    if($("ibReply"))$("ibReply").onclick=function(){
+      var s=m.subject||"";if(!/^re:/i.test(s))s="Re: "+s;
+      var q="\n\n\n----- On "+when(m.date)+", "+(m.fromName||m.from)+" wrote -----\n"+String(m.body||"").split("\n").map(function(l){return "> "+l;}).join("\n");
+      fill({subject:s,body:q,extra:m.from});
+      setTimeout(function(){var b=$("emBody");if(b){b.focus();b.setSelectionRange(0,0);b.scrollTop=0;}},60);
+    };
+    $("ibFwd").onclick=function(){
+      var s=m.subject||"";if(!/^fwd?:/i.test(s))s="Fwd: "+s;
+      fill({subject:s,body:"\n\n----- Forwarded email -----\nFrom: "+(m.fromName||"")+" <"+(m.from||"")+">\nDate: "+when(m.date)+"\nSubject: "+(m.subject||"")+"\n\n"+(m.body||""),extra:""});
+    };
+    if($("ibUnread"))$("ibUnread").onclick=function(){m.read=false;put(m);closeMail();};
+    $("ibDel").onclick=function(){if(!confirm("Delete this email from the Inbox? (It stays in Gmail.)"))return;del(m.id);closeMail();msg("Deleted from the Inbox.","good");};
+    badge();window.scrollTo(0,0);
+  }
+  function closeMail(){openId=null;$("ibRead").style.display="none";$("ibListCard").style.display="";paint();}
+
+  /* ---------- add emails (.eml / .txt / pasted) ---------- */
+  function unfold(h){return h.replace(/\r?\n[ \t]+/g," ");}
+  function qp(s){return s.replace(/=\r?\n/g,"").replace(/=([0-9A-F]{2})/gi,function(_,h){return String.fromCharCode(parseInt(h,16));});}
+  function utf8(s){try{return decodeURIComponent(escape(s));}catch(e){return s;}}
+  function words(s){return String(s||"").replace(/=\?([^?]+)\?([BQ])\?([^?]*)\?=/gi,function(_,cs,enc,t){try{return utf8(enc.toUpperCase()==="B"?atob(t):qp(t.replace(/_/g," ")));}catch(e){return t;}});}
+  function addr(s){s=words(s||"").trim();var m=s.match(/^(.*?)<([^>]+)>/);return m?{name:m[1].replace(/["']/g,"").trim(),email:m[2].trim()}:{name:"",email:s.replace(/["']/g,"").trim()};}
+  function list(s){return words(s||"").split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(function(x){return x.trim();}).filter(Boolean);}
+  function strip(h){var d=document.createElement("div");d.innerHTML=String(h).replace(/<(script|style)[\s\S]*?<\/\1>/gi,"").replace(/<br\s*\/?>/gi,"\n").replace(/<\/(p|div|tr|li|h\d)>/gi,"\n");return (d.textContent||"").replace(/\n{3,}/g,"\n\n").trim();}
+  function bodyOf(raw){
+    var i=raw.search(/\r?\n\r?\n/);var head=unfold(i<0?raw:raw.slice(0,i)),body=i<0?"":raw.slice(i).replace(/^\r?\n\r?\n/,"");
+    var H={};head.split(/\r?\n/).forEach(function(l){var c=l.indexOf(":");if(c>0)H[l.slice(0,c).trim().toLowerCase()]=l.slice(c+1).trim();});
+    var ct=H["content-type"]||"text/plain",te=(H["content-transfer-encoding"]||"").toLowerCase(),att=[];
+    var bm=ct.match(/boundary="?([^";]+)"?/i);
+    if(/multipart/i.test(ct)&&bm){
+      var parts=body.split("--"+bm[1]),txt="",htm="";
+      parts.forEach(function(p){
+        if(!p.trim()||/^--/.test(p))return;
+        var r=bodyOf(p.replace(/^\r?\n/,""));
+        if(r.att.length)att=att.concat(r.att);
+        if(r.isAtt){att.push(r.name);return;}
+        if(r.text&&!txt)txt=r.text;if(r.html&&!htm)htm=r.html;
+      });
+      return {H:H,text:txt,html:htm,att:att};
+    }
+    var disp=H["content-disposition"]||"",nm=(disp.match(/filename="?([^";]+)"?/i)||ct.match(/name="?([^";]+)"?/i)||[])[1];
+    if(/attachment/i.test(disp)||(nm&&!/^text\//i.test(ct)))return {H:H,isAtt:true,name:words(nm||"file"),att:[]};
+    if(te==="base64"){try{body=atob(body.replace(/\s+/g,""));}catch(e){}}
+    else if(te==="quoted-printable")body=qp(body);
+    if(/charset="?utf-8/i.test(ct)||te)body=utf8(body);
+    return /text\/html/i.test(ct)?{H:H,html:body,att:[]}:{H:H,text:body,att:[]};
+  }
+  function parse(raw,label){
+    raw=String(raw||"").replace(/^﻿/,"");
+    var r=bodyOf(raw),H=r.H;
+    if(!H.from&&!H.subject&&!H.date)return {id:rid(),date:new Date().toISOString(),subject:(raw.split("\n")[0]||"").slice(0,120),from:"",fromName:"",to:[],body:raw.trim(),label:label,dir:"in",read:false};
+    var f=addr(H.from),dt=new Date(H.date||Date.now());
+    var me=(window.D&&D.settings&&D.settings.myEmail||"").toLowerCase();
+    return {id:"x"+(H["message-id"]?H["message-id"].replace(/[^a-z0-9]/gi,"").slice(-24):rid()),
+      date:isNaN(dt)?new Date().toISOString():dt.toISOString(),subject:words(H.subject||""),from:f.email,fromName:f.name,
+      to:list(H.to),cc:list(H.cc),body:(r.text||strip(r.html||"")).trim(),attachments:r.att,label:label,
+      dir:(me&&f.email.toLowerCase()===me)?"out":"in",read:false};
+  }
+  $("ibAddBtn").onclick=function(){$("ibAdd").style.display="";$("ibAdd").scrollIntoView({behavior:"smooth"});};
+  $("ibAddClose").onclick=function(){$("ibAdd").style.display="none";};
+  $("ibAddGo").onclick=function(){
+    var lab=$("ibNewLabel").value.trim(),fs=Array.prototype.slice.call($("ibFiles").files||[]),txt=$("ibPaste").value;
+    if(!fs.length&&!txt.trim()){$("ibAddMsg").textContent="Pick a file or paste an email first.";return;}
+    Promise.all(fs.map(function(f){return f.text();})).then(function(raws){
+      if(txt.trim())raws.push(txt);
+      var n=0;raws.forEach(function(r){var m=parse(r,lab);if(!get(m.id)&&put(m))n++;});
+      $("ibFiles").value="";$("ibPaste").value="";$("ibAddMsg").textContent="";
+      $("ibAdd").style.display="none";msg(n+" email"+(n===1?"":"s")+" added to the Inbox.","good");paint();
+    });
+  };
+
+  /* ---------- hook into the existing app without changing it ---------- */
+  /* The planner keeps its code in its own closed section, so this watches the Email tab instead: when it opens with
+     something new in the Send box (Use again, Email this day, Reply…), Outgoing is shown. */
+  function snap(){return [$("emExtra").value,$("emSubject").value,$("emBody").value].join("\u0001")+"\u0001"+document.querySelectorAll("#emPicker .on,#emPicker input:checked").length;}
+  var lastSnap=snap(),wasOn=view.classList.contains("on");
+  new MutationObserver(function(){
+    var on=view.classList.contains("on");
+    if(on&&!wasOn){var s2=snap();if(s2!==lastSnap&&/[^\u0001\s0]/.test(s2))setPart("out");else if(part==="in"&&!openId)paint();}
+    if(!on&&wasOn)lastSnap=snap();
+    wasOn=on;
+  }).observe(view,{attributes:true,attributeFilter:["class"]});
+  function fill(o){
+    $("emExtra").value=o.extra||"";$("emSubject").value=o.subject||"";$("emBody").value=o.body||"";
+    var f=$("emFormat");if(f&&f.value!=="text"){f.value="text";f.dispatchEvent(new Event("change",{bubbles:true}));}
+    ["emExtra","emSubject","emBody"].forEach(function(id){$(id).dispatchEvent(new Event("input",{bubbles:true}));});
+    setPart("out");window.scrollTo(0,0);
+  }
+  window.addEventListener("storage",function(e){if(e.key&&e.key.indexOf(PFX)===0&&part==="in"&&!openId)paint();});
+  setInterval(function(){if(view.classList.contains("on")&&part==="in"&&!openId)paint();else badge();},30000);
+  setPart("in");
+})();
+</script>
 </body>
 </html>
